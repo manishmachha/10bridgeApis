@@ -1,0 +1,1344 @@
+openapi: 3.0.0
+info:
+  title: PMS APIs
+  description: >
+    This API requires OAuth 2.0 Client Credentials flow for authentication.
+    The client must pass the `client_id` and `client_secret` as a Base64-encoded string in the Authorization header.
+    The format should be `Basic <Base64(client_id:client_secret)>`.
+  version: 1.0.10
+servers:
+  - url: https://devapi.10bridge.io/
+
+paths:
+  /Opargo/dev/insurance_carriers:
+    post:
+      operationId: PayorGroups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestMetaData"
+      tags:
+        - GetPayorGroups
+      responses:
+        "200":
+          description: Get practice Payor Groups for a given practice.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  carriers:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/InsuranceCarrier"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/practitioners:
+    post:
+      operationId: Providers
+      tags:
+        - GetProviders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestMetaData"
+
+      responses:
+        "200":
+          description: Get practice Providers for a given practice.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Practitioner"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/referring_providers:
+    post:
+      operationId: ReferringProviders
+      tags:
+        - GetReferringProviders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestMetaData"
+
+      responses:
+        "200":
+          description: Get refferring providers for a given practice.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Practitioner"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/patients/search:
+    post:
+      operationId: Patients
+      tags:
+        - SearchPatient
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientRequest"
+
+      responses:
+        "200":
+          description: Patients found - search patients
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  patients:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Patient"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "404":
+          description: No patients Found - The search returned no results.
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/patients/insurances:
+    post:
+      operationId: PatientInsurance
+      tags:
+        - GetPatientPayorPlans
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientInsuranceRequest"
+
+      responses:
+        "200":
+          description: get Patient Insurances
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  insurances:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/InsurancePolicy"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/schedule/search:
+    post:
+      operationId: Schedule
+      tags:
+        - GetProviderSchedule
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleRequest"
+
+      responses:
+        "200":
+          description: search Schedule
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  schedule:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Schedule"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/slots/search:
+    post:
+      operationId: ProviderSlots
+      tags:
+        - GetProviderSlots
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SlotRequest"
+
+      responses:
+        "200":
+          description: search Slots
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  slots:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Slot"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token.
+        "404":
+          description: No slots Found - The search returned no results.
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/appointment_notes:
+    post:
+      operationId: AppointmentNotes
+      tags:
+        - GetNotes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentNotesRequest"
+
+      responses:
+        "200":
+          description: get Appointment notes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notes:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AppointmentNotes"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/appointments/search:
+    post:
+      operationId: Appointments
+      tags:
+        - GetAppontments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentSearchRequest"
+
+      responses:
+        "200":
+          description: search Appointments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  appointments:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Appointment"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "404":
+          description: No Appointments Found - The search returned no results.
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/appointments:
+    put:
+      operationId: CancelAppointment
+      tags:
+        - CancelAppointment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelAppointmentRequest"
+
+      responses:
+        "200":
+          description: Appointment cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentResponse"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+    post:
+      operationId: BookAppointment
+      tags:
+        - BookAppointment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewAppointmentRequest"
+      responses:
+        "200":
+          description: Appointment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/patients:
+    post:
+      operationId: Patient
+      tags:
+        - CreatePatient
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientCreateRequest"
+
+      responses:
+        "200":
+          description: patinet created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/locations:
+    post:
+      operationId: PracticeLocation
+      tags:
+        - GetPracticeLocations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestMetaData"
+
+      responses:
+        "200":
+          description: Get practice locations for a given practice.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  locations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Location"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/races:
+    post:
+      operationId: Race
+      tags:
+        - GetRaceValues
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestMetaData"
+
+      responses:
+        "200":
+          description: Get supported races  for a given practice.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  races:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Race"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/genders:
+    post:
+      operationId: Gender
+      tags:
+        - GetGenderValues
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestMetaData"
+
+      responses:
+        "200":
+          description: Get supported gender  for a given practice.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  genders:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Gender"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/ethnicities:
+    post:
+      operationId: Ethnicity
+      tags:
+        - GetEthnicityValues
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestMetaData"
+
+      responses:
+        "200":
+          description: Get supported ethnicities  for a given practice.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ethnicities:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Ethnicity"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/cpts:
+    post:
+      operationId: CPT
+      tags:
+        - GetCPTValues
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestMetaData"
+
+      responses:
+        "200":
+          description: Get supported cpts  for a given practice.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cpts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CPTCode"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token.
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/appointment_types:
+    post:
+      operationId: AppointmentTypes
+      tags:
+        - GetAppointmentTypes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestMetaData"
+
+      responses:
+        "200":
+          description: Get appointment types for a given practice.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  appointment_types:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AppointmentType"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+
+  /Opargo/dev/patient_alerts:
+    post:
+      operationId: PatientAlert
+      tags:
+        - GetPatientAlerts
+      description: Also called as Patient Flags
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientAlertsRequest"
+      responses:
+        "200":
+          description: Get patient alerts for a given patient.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  patientAlerts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PatientAlertsResponse"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+
+  /Opargo/dev/cancel_reasons:
+    post:
+      operationId: CancellationReason
+      tags:
+        - GetAvailableCancelReasons
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestMetaData"
+
+      responses:
+        "200":
+          description: Get supported cancel reasons  for a given practice.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cancelReasons:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CancelReasonsResponse"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token.
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/change_reasons:
+    post:
+      operationId: ChangeReason
+      tags:
+        - GetAvailableChangeReasons
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestMetaData"
+
+      responses:
+        "200":
+          description: Get supported change reasons  for a given practice.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  changeReasons:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ChangeReasonsResponse"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token.
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/referral_sources:
+    post:
+      operationId: ReferralSource
+      tags:
+        - GetReferralSources
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestMetaData"
+
+      responses:
+        "200":
+          description: Get supported referral sources for a given practice.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  referralSources:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ReferralSourcesResponse"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token.
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+
+security:
+  - OAuth2: []
+components:
+  securitySchemes:
+    OAuth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://devapi.10bridge.io/api/auth/v2/token
+          scopes: {}
+
+  schemas:
+    Race:
+      description: "supported Race value set"
+      type: object
+      properties:
+        race_id:
+          type: integer
+        race:
+          type: string
+      required:
+        - race_id
+        - race
+    ICDCode:
+      description: "supported icd value set"
+      type: object
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+      required:
+        - code
+        - description
+    CPTCode:
+      description: "supported cpt value set"
+      type: object
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+      required:
+        - code
+        - description
+    Gender:
+      description: "supported gender value set"
+      type: object
+      properties:
+        gender_id:
+          type: integer
+        gender:
+          type: string
+      required:
+        - gender_id
+        - gender
+    Ethnicity:
+      description: "supported ethnicity value set"
+      type: object
+      properties:
+        ethnicity_id:
+          type: integer
+        ethnicity:
+          type: string
+      required:
+        - ethnicity_id
+        - ethnicity
+    Location:
+      type: object
+      properties:
+        location_id:
+          type: string
+        location_name:
+          type: string
+        location_type:
+          type: string
+          example: "home/ office etc"
+        address_line_1:
+          type: string
+        address_line_2:
+          type: string
+        state:
+          type: string
+        city:
+          type: string
+        zip:
+          type: string
+        abbreviation:
+          type: string
+        country_code:
+          type: string
+        is_active:
+          type: string
+      required:
+        - location_id
+        - location_name
+        - location_type
+        - address_line_1
+        - address_line_2
+        - state
+        - city
+        - zip
+        - abbreviation
+    Practitioner:
+      type: object
+      properties:
+        Practitioner_id:
+          type: string
+        speciality:
+          type: string
+        is_physician:
+          type: boolean
+        is_practice_member:
+          type: boolean
+        first_name:
+          type: string
+        last_name:
+          type: string
+        middle_name:
+          type: string
+        abbreviation:
+          type: string
+        is_active:
+          type: string
+      required:
+        - Practitioner_id
+        - speciality
+        - first_name
+        - last_name
+        - abbreviation
+    NewPatient:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        middle_name:
+          type: string
+        date_of_birth:
+          type: string
+        gender:
+          type: string
+        phone:
+          type: string
+        address_line_1:
+          type: string
+        address_line_2:
+          type: string
+        state:
+          type: string
+        city:
+          type: string
+        zip:
+          type: string
+        email:
+          type: string
+      required:
+        - first_name
+        - last_name
+        - date_of_birth
+        - gender
+        - phone
+        - address_line_1
+        - address_line_2
+        - state
+        - city
+        - zip
+        - email
+    Patient:
+      allOf:
+        - $ref: "#/components/schemas/NewPatient"
+      type: object
+      properties:
+        profile_id:
+          type: string
+        practitioner_id:
+          type: integer
+        insurances:
+          type: array
+          items:
+            $ref: "#/components/schemas/InsurancePolicy"
+      required:
+        - profile_id
+        - practitioner_id
+    AppointmentType:
+      type: object
+      properties:
+        appointment_type_id:
+          type: string
+        abbreviation:
+          type: string
+          example: "ACUTE"
+        description:
+          type: string
+          example: "ACUTE Visit"
+        duration:
+          type: integer
+          description: "Default duration in minutes for appointment type"
+          example: 15
+        appointment_category_abbrevation:
+          type: string
+          example: "OV"
+        appointment_catgory_description:
+          type: string
+          example: "OFFICE VISIT"
+        is_active:
+          type: string
+      required:
+        - appointment_type_id
+        - abbreviation
+        - description
+        - duration
+    InsuranceCarrier:
+      type: object
+      properties:
+        carrier_id:
+          type: string
+        carrier_name:
+          type: string
+        group_id:
+          type: string
+        abbreviation:
+          type: string
+        coverage_type:
+          type: string
+        phone:
+          type: string
+        address_line_1:
+          type: string
+        address_line_2:
+          type: string
+        state:
+          type: string
+        city:
+          type: string
+        zip:
+          type: string
+        email:
+          type: string
+        contact_name:
+          type: string
+        is_active:
+          type: string
+      required:
+        - carrier_id
+        - carrier_name
+        - abbreviation
+        - coverage_type
+        - phone
+        - address_line_1
+        - state
+        - city
+        - zip
+    InsurancePolicy:
+      type: object
+      properties:
+        policy_id:
+          type: string
+        group_name:
+          type: string
+        group_number:
+          type: string
+        policy_phone:
+          type: string
+        policy_phone_ext:
+          type: string
+        certificate_number:
+          type: string
+        policy_acceptance_flag:
+          type: boolean
+        policy_effective_date:
+          type: string
+          format: "date"
+        policy_expiration_date:
+          type: string
+          format: "date"
+        subscriber_certificate_suffix:
+          type: string
+        plan_code:
+          type: string
+        co_payment_amount:
+          type: integer
+        carrier:
+          $ref: "#/components/schemas/InsuranceCarrier"
+    Schedule:
+      type: object
+      properties:
+        scheduled_id:
+          type: integer
+          description: "appointment id "
+        past_appointment:
+          type: boolean
+        status:
+          type: string
+          description: "either it is bumped or scheduled "
+        service_category:
+          type: string
+          description: "Allied Health or Child Care or Dental etc Ref: https://build.fhir.org/appointment-definitions.html#Appointment.serviceCategory"
+        service_type:
+          type: string
+          description: "The type of appointments that can be booked into this slot (ideally this would be an identifiable service - which is at a location, rather than the location itself). If provided then this overrides the value provided on the Schedule resource"
+        name:
+          type: string
+          description: "This MAY be used to describe what the schedule is for"
+        comments:
+          type: string
+        start_date:
+          type: string
+          format: "date"
+        end_date:
+          type: string
+          format: "date"
+        provider:
+          $ref: "#/components/schemas/Practitioner"
+        location:
+          $ref: "#/components/schemas/Location"
+      required:
+        - scheduled_id
+        - start_date
+        - end_date
+        - service_type
+        - provider
+        - location
+        - past_appointment
+        - status
+    Slot:
+      type: object
+      properties:
+        slot_id:
+          type: integer
+        service_category:
+          type: string
+          description: "Allied Health or Child Care or Dental etc Ref: https://build.fhir.org/appointment-definitions.html#Appointment.serviceCategory"
+        service_type:
+          type: string
+          description: "The type of appointments that can be booked into this slot (ideally this would be an identifiable service - which is at a location, rather than the location itself). If provided then this overrides the value provided on the Schedule resource"
+        speciality:
+          type: string
+          description: "The specialty of a practitioner that would be required to perform the service requested in this appointment"
+        eligible_appointment_types:
+          type: array
+          items:
+            $ref: "#/components/schemas/AppointmentType"
+          description: "A slot may be allow multiple appointment types, but when booked, would only be used for one of the given appointment types"
+        status:
+          type: string
+          description: "busy | free | busy-unavailable | busy-tentative | entered-in-error"
+        availability_date:
+          type: string
+          format: "date"
+        start_time:
+          type: string
+          format: "date-time"
+        end_time:
+          type: string
+          format: "date-time"
+        over_booked:
+          type: boolean
+        comments:
+          type: string
+        schedule:
+          type: string
+        scheduling_department:
+          type: string
+        provider_resource:
+          $ref: "#/components/schemas/Practitioner"
+        location_resource:
+          $ref: "#/components/schemas/Location"
+      required:
+        - slot_id
+        - start_time
+        - end_time
+        - status
+        - provider_resource
+        - location_resource
+        - eligible_appointment_types
+        - over_booked
+    RequestMetaData:
+      type: object
+      properties:
+        siteID:
+          type: string
+        customerName:
+          type: string
+      required: # Added the required fields here
+        - siteID
+        - customerName
+    SlotRequest:
+      type: object
+      properties:
+        meta:
+          $ref: "#/components/schemas/RequestMetaData"
+        data:
+          type: object
+          properties:
+            appointment_type:
+              type: string
+            duration:
+              type: string
+            activityProviders:
+              type: array
+              items:
+                type: number
+                example: [12, 13]
+            locations:
+              type: array
+              items:
+                type: number
+                example: [123, 234]
+            start_date:
+              type: string
+              format: "date"
+            end_date:
+              type: string
+              format: "date"
+          required:
+            - appointment_type
+            - activityProviders
+            - duration
+            - start_date
+            - end_date
+    PatientCreateRequest:
+      type: object
+      properties:
+        meta:
+          $ref: "#/components/schemas/RequestMetaData"
+        data:
+          $ref: "#/components/schemas/NewPatient"
+        doctor_info:
+          $ref: "#/components/schemas/Practitioner"
+        patientInsurance:
+          $ref: "#/components/schemas/InsuranceCarrier"
+        location_info:
+          $ref: "#/components/schemas/Location"
+    ScheduleRequest:
+      type: object
+      properties:
+        meta:
+          $ref: "#/components/schemas/RequestMetaData"
+        data:
+          type: object
+          properties:
+            appointment_type:
+              type: string
+            patientProfileId:
+              type: string
+            first_name:
+              type: string
+            last_name:
+              type: string
+            start_date:
+              type: string
+              format: "date"
+            end_date:
+              type: string
+              format: "date"
+          required:
+            - patientProfileId
+            - first_name
+            - last_name
+            - start_date
+            - end_date
+    AppointmentSearchRequest:
+      type: object
+      properties:
+        meta:
+          $ref: "#/components/schemas/RequestMetaData"
+        data:
+          type: object
+          properties:
+            patient_id:
+              type: string
+            practioner_abbreviation:
+              type: string
+            start_date:
+              type: string
+              format: "date"
+            end_date:
+              type: string
+              format: "date"
+    PatientRequest:
+      type: object
+      properties:
+        meta:
+          $ref: "#/components/schemas/RequestMetaData"
+        data:
+          type: object
+          properties:
+            first_name:
+              type: string
+            last_name:
+              type: string
+            date_of_birth:
+              type: string
+              format: "date"
+          oneOf: # any one field is required
+            - required:
+                - first_name
+            - required:
+                - last_name
+            - required:
+                - date_of_birth
+    AppointmentNotesRequest:
+      type: object
+      properties:
+        meta:
+          $ref: "#/components/schemas/RequestMetaData"
+        data:
+          type: object
+          properties:
+            appointment_id:
+              type: string
+            patient_profile_id:
+              type: string
+    AppointmentNotes:
+      type: object
+      properties:
+        note:
+          type: string
+        appointment:
+          type: string
+        patient_profile_id:
+          type: string
+    NewAppointment:
+      type: object
+      properties:
+        appointment_date:
+          type: string
+        appointment_duration:
+          type: integer
+        appointment_date_time:
+          type: string
+        appointment_type:
+          type: string
+        appointment_status:
+          type: string
+        appointment_created_date:
+          type: string
+        appointment_booking_date:
+          type: string
+        appointment_booked_by:
+          type: string
+        coverage_type:
+          type: string
+        visit_type:
+          type: string
+        appointment_start_time:
+          type: string
+        appointment_end_time:
+          type: string
+        scheduled_location_id:
+          type: string
+        scheduled_provider_id:
+          type: string
+        scheduled_department:
+          type: string
+        referring_provider_id:
+          type: string
+        patient_identifier:
+          type: string
+        notes_or_comments:
+          type: string
+      required:
+        - appointment_date
+        - appointment_duration
+        - appointment_created_date
+        - appointment_booking_date
+        - scheduled_location_id
+        - scheduled_provider_id
+        - notes_or_comments
+        - appointment_type
+        - coverage_type
+    Appointment:
+      allOf:
+        - $ref: "#/components/schemas/NewAppointment"
+      type: object
+      properties:
+        appointment_id:
+          type: string
+        appointment_status:
+          type: string
+        appointment_created_date:
+          type: string
+        appointment_booking_date:
+          type: string
+        appointment_booked_by:
+          type: string
+        cancellation_reason:
+          type: string
+        ICDCode:
+          type: string
+      required:
+        - appointment_id
+        - appointment_created_date
+        - appointment_status
+        - cancellation_reason
+    AppointmentResponse:
+      type: object
+      properties:
+        appointmentCancelStatus:
+          type: boolean
+        appointment_id:
+          type: integer
+      required:
+        - appointment_id
+        - appointmentCancelStatus
+    CancelAppointmentRequest:
+      type: object
+      properties:
+        meta:
+          $ref: "#/components/schemas/RequestMetaData"
+        appointments:
+          $ref: "#/components/schemas/NewAppointment"
+    NewAppointmentRequest:
+      type: object
+      properties:
+        meta:
+          $ref: "#/components/schemas/RequestMetaData"
+        appointments:
+          $ref: "#/components/schemas/NewAppointment"
+    PatientAlertsRequest:
+      type: object
+      properties:
+        meta:
+          $ref: "#/components/schemas/RequestMetaData"
+        body:
+          type: object
+          properties:
+            patientId:
+              type: string
+            patientProfileId:
+              type: string
+          required:
+            - patientId
+    PatientInsuranceRequest:
+      type: object
+      properties:
+        meta:
+          $ref: "#/components/schemas/RequestMetaData"
+        body:
+          type: object
+          properties:
+            first_name:
+              type: string
+            last_name:
+              type: string
+            date_of_birth:
+              type: string
+              format: "date"
+            patientProfileId:
+              type: string
+          required:
+            - last_name
+            - date_of_birth
+            - patientProfileId
+    CancelReasonsResponse:
+      type: object
+      properties:
+        cancellation_reason_id:
+          type: integer
+        description:
+          type: string
+        abbreviation:
+          type: string
+      required:
+        - cancellation_reason_id
+        - description
+    ReferralSourcesResponse:
+      type: object
+      properties:
+        referral_source_id:
+          type: integer
+        description:
+          type: string
+        abbreviation:
+          type: string
+      required:
+        - referral_source_id
+        - description
+    ChangeReasonsResponse:
+      type: object
+      properties:
+        change_reason_id:
+          type: integer
+        description:
+          type: string
+        abbreviation:
+          type: string
+      required:
+        - change_reason_id
+        - description
+    PatientAlertsResponse:
+      type: object
+      properties:
+        patient:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        preventBooking:
+          type: boolean
