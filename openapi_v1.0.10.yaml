@@ -969,7 +969,7 @@ components:
       type: object
       properties:
         slot_id:
-          type: integer
+          type: string
         service_category:
           type: string
           description: "Allied Health or Child Care or Dental etc Ref: https://build.fhir.org/appointment-definitions.html#Appointment.serviceCategory"
@@ -988,14 +988,11 @@ components:
           type: string
           description: "busy | free | busy-unavailable | busy-tentative | entered-in-error"
         availability_date:
-          type: string
-          format: "date"
+          type: string
         start_time:
-          type: string
-          format: "date-time"
+          type: string
         end_time:
-          type: string
-          format: "date-time"
+          type: string
         over_booked:
           type: boolean
         comments:
@@ -1051,10 +1048,8 @@ components:
                 example: [123, 234]
             start_date:
               type: string
-              format: "date"
             end_date:
               type: string
-              format: "date"
           required:
             - appointment_type
             - activityProviders
@@ -1116,10 +1111,8 @@ components:
               type: string
             start_date:
               type: string
-              format: "date"
             end_date:
               type: string
-              format: "date"
     PatientRequest:
       type: object
       properties:

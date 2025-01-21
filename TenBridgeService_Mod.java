@@ -1,7 +1,6 @@
 package com.ps.tenbridge.datahub.controllerImpl;
 
 import java.util.List;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,12 +21,14 @@ import com.ps.tenbridge.datahub.mapper.ReferralSourcesMapper;
 import com.ps.tenbridge.datahub.services.authentication.TokenService;
 import com.ps.tenbridge.datahub.utility.BaseService;
 import com.veradigm.ps.tenbridge.client.ApiClient;
+import com.veradigm.ps.tenbridge.client.api.CreatePatientApi;
 import com.veradigm.ps.tenbridge.client.api.GetAppontmentsApi;
 import com.veradigm.ps.tenbridge.client.api.GetAvailableCancelReasonsApi;
 import com.veradigm.ps.tenbridge.client.api.GetAvailableChangeReasonsApi;
 import com.veradigm.ps.tenbridge.client.api.GetCptValuesApi;
 import com.veradigm.ps.tenbridge.client.api.GetGenderValuesApi;
 import com.veradigm.ps.tenbridge.client.api.GetPatientAlertsApi;
+import com.veradigm.ps.tenbridge.client.api.GetProviderSlotsApi;
 import com.veradigm.ps.tenbridge.client.api.GetReferralSourcesApi;
 import com.veradigm.ps.tenbridge.client.models.AppointmentSearchRequest;
 import com.veradigm.ps.tenbridge.client.models.AppointmentSearchRequestData;
@@ -36,11 +37,16 @@ import com.veradigm.ps.tenbridge.client.models.CPT200Response;
 import com.veradigm.ps.tenbridge.client.models.CancellationReason200Response;
 import com.veradigm.ps.tenbridge.client.models.ChangeReason200Response;
 import com.veradigm.ps.tenbridge.client.models.Gender200Response;
+import com.veradigm.ps.tenbridge.client.models.Patient;
 import com.veradigm.ps.tenbridge.client.models.PatientAlert200Response;
 import com.veradigm.ps.tenbridge.client.models.PatientAlertsRequest;
 import com.veradigm.ps.tenbridge.client.models.PatientAlertsRequestBody;
+import com.veradigm.ps.tenbridge.client.models.PatientCreateRequest;
+import com.veradigm.ps.tenbridge.client.models.ProviderSlots200Response;
 import com.veradigm.ps.tenbridge.client.models.ReferralSource200Response;
 import com.veradigm.ps.tenbridge.client.models.RequestMetaData;
+import com.veradigm.ps.tenbridge.client.models.Slot;
+import com.veradigm.ps.tenbridge.client.models.SlotRequest;
 
 @Service
 public class TenBridgeService_Mod extends BaseService {
@@ -59,6 +65,10 @@ public class TenBridgeService_Mod extends BaseService {
 	private GetPatientAlertsApi patientAlertsApi;
 	@Autowired
 	private GetAppontmentsApi appointmentsApi;
+	@Autowired
+	private GetProviderSlotsApi slotsApi;
+	@Autowired
+	private CreatePatientApi createPatientApi;
 	@Autowired
 	private GetAvailableCancelReasonsApi cancelReasonsApi;
 	@Autowired
@@ -134,6 +144,18 @@ public class TenBridgeService_Mod extends BaseService {
 		appointmentSearchRequest.setData(data);
 		setToken();
 		Appointments200Response apiResponse = appointmentsApi.appointments(appointmentSearchRequest);
+		return apiResponse;
+	}
+
+	public Object getSlots(SlotRequest slotRequest) {
+		setToken();
+		ProviderSlots200Response apiResponse = slotsApi.providerSlots(slotRequest);
+		return apiResponse;
+	}
+
+	public Object createPatient(PatientCreateRequest patientCreateRequest) {
+		setToken();
+		Patient apiResponse = createPatientApi.patient(patientCreateRequest);
 		return apiResponse;
 	}
 
