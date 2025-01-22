@@ -119,115 +119,115 @@ Scenario: Providers - Successfully retrieve providers with valid set token
 
 
 ### Scenarios for `getEthnicities` Method
-#
-#  Scenario: Successfully retrieve ethnicities with valid set token
-#    Given the TenBridgeService is initialized with a valid token
-#    When I call the getEthnicities API with siteID "621" and customerName "OpargoEpicTest" with valid Token
-#    Then I should receive a list of ethnicities
-#    And each ethnicity should have valid details
-#
-#  Scenario: API call to ethnicityApi.ethnicity(meta) fails with a 400 or 500 response
-#    Given the TenBridgeService is initialized
-#    When the getEthnicities API is called and the API returns an error status
-#    Then an appropriate exception or error message should be logged
-#
-#  Scenario: Invalid token causes failure
-#    Given the TenBridgeService is initialized with an invalid token
-#    When I call the getEthnicities API with siteID "621" and customerName "OpargoEpicTest" with invalid Token
-#    Then the API call should fail with an unauthorized error
-#
-#  Scenario: Build response fails
-#    Given the TenBridgeService is initialized
-#    When the getEthnicities API receives invalid data for response building
-#    Then an appropriate exception or error message should be logged at response
-#
-#  Scenario: API response returns empty list
-#    Given the TenBridgeService is initialized
-#    When the getEthnicities API returns an empty list
-#    Then an appropriate exception or error message should be logged for empty list
-#
-#
+
+  Scenario: Ethnicities - Successfully retrieve ethnicities with valid set token
+    Given the TenBridgeService is initialized with a valid token For Ethnicities
+    When I call the getEthnicities API with siteID "621" and customerName "OpargoEpicTest" with valid Token
+    Then I should receive a list of ethnicities
+    And each ethnicity should have valid details For Ethnicities
+
+  Scenario: Ethnicities - API call to ethnicityApi.ethnicity(meta) fails with a 400 or 500 response
+    Given the TenBridgeService is initialized For Ethnicities
+    When the getEthnicities API is called and the API returns an error status
+    Then an appropriate exception or error message should be logged For Ethnicities
+
+  Scenario: Ethnicities - Invalid token causes failure
+    Given the TenBridgeService is initialized with an invalid token For Ethnicities
+    When I call the getEthnicities API with siteID "621" and customerName "OpargoEpicTest" with invalid Token
+    Then the API call should fail with an unauthorized error For Ethnicities
+
+  Scenario: Ethnicities - Build response fails
+    Given the TenBridgeService is initialized For Ethnicities
+    When the getEthnicities API receives invalid data for response building
+    Then an appropriate exception or error message should be logged at response For Ethnicities
+
+  Scenario: Ethnicities - API response returns empty list
+    Given the TenBridgeService is initialized For Ethnicities
+    When the getEthnicities API returns an empty list
+    Then an appropriate exception or error message should be logged for empty list For Ethnicities
+
+
 #### Scenarios for `getRaces` Method
-#
-#  Scenario: Successfully retrieve races with valid set token
-#    Given the TenBridgeService is initialized with a valid token
-#    When I call the getRaces API with siteID "621" and customerName "OpargoEpicTest" with valid Token
-#    Then I should receive a list of races
-#    And each race should have valid details
-#
-#  Scenario: API call to racesApi.race(meta) fails with a 400 or 500 response
-#    Given the TenBridgeService is initialized
-#    When the getRaces API is called and the API returns an error status
-#    Then an appropriate exception or error message should be logged
-#
-#  Scenario: Invalid token causes failure
-#    Given the TenBridgeService is initialized with an invalid token
-#    When I call the getRaces API with siteID "621" and customerName "OpargoEpicTest" with invalid Token
-#    Then the API call should fail with an unauthorized error
-#
-#  Scenario: Build response fails
-#    Given the TenBridgeService is initialized
-#    When the getRaces API receives invalid data for response building
-#    Then an appropriate exception or error message should be logged at response
-#
-#  Scenario: API response returns empty list
-#    Given the TenBridgeService is initialized
-#    When the getRaces API returns an empty list
-#    Then an appropriate exception or error message should be logged for empty list
-#
-#
+ 
+  Scenario: Races - Successfully retrieve races with valid set token
+    Given the TenBridgeService is initialized with a valid token For Races
+    When I call the getRaces API with siteID "621" and customerName "OpargoEpicTest" with valid Token
+    Then I should receive a list of races
+    And each race should have valid details For Races
+ 
+  Scenario: Races - API call to racesApi.race(meta) fails with a 400 or 500 response
+    Given the TenBridgeService is initialized For Races
+    When the getRaces API is called and the API returns an error status
+    Then an appropriate exception or error message should be logged For Races
+ 
+  Scenario: Races - Invalid token causes failure
+    Given the TenBridgeService is initialized with an invalid token For Races
+    When I call the getRaces API with siteID "621" and customerName "OpargoEpicTest" with invalid Token
+    Then the API call should fail with an unauthorized error For Races
+ 
+  Scenario: Races - Build response fails
+    Given the TenBridgeService is initialized For Races
+    When the getRaces API receives invalid data for response building
+    Then an appropriate exception or error message should be logged at response For Races
+ 
+  Scenario: Races - API response returns empty list
+    Given the TenBridgeService is initialized For Races
+    When the getRaces API returns an empty list
+    Then an appropriate exception or error message should be logged for empty list For Races
+ 
+ 
 #### Scenarios for `getReferralSources` Method
-#
-#  Scenario: Successfully retrieve referral sources with valid set token
-#    Given the TenBridgeService is initialized with a valid token
-#    When I call the getReferralSources API with siteID "621" and customerName "OpargoEpicTest" with valid Token
-#    Then I should receive a list of referral sources
-#    And each referral source should have valid details
-#
-#  Scenario: API call to referralSourcesApi.referralSource(meta) fails with a 400 or 500 response
-#    Given the TenBridgeService is initialized
-#    When the getReferralSources API is called and the API returns an error status
-#    Then an appropriate exception or error message should be logged
-#
-#  Scenario: Invalid token causes failure
-#    Given the TenBridgeService is initialized with an invalid token
-#    When I call the getReferralSources API with siteID "621" and customerName "OpargoEpicTest" with invalid Token
-#    Then the API call should fail with an unauthorized error
-#
-#  Scenario: Build response fails
-#    Given the TenBridgeService is initialized
-#    When the getReferralSources API receives invalid data for response building
-#    Then an appropriate exception or error message should be logged at response
-#
-#  Scenario: API response returns empty list
-#    Given the TenBridgeService is initialized
-# 		When the getReferralSources API returns an empty list
-#    Then an appropriate exception or error message should be logged for empty list
-#
-#### Scenarios for `getPatientAlerts` Method
-#
-#  Scenario: Successfully retrieve patient alerts with valid set token
-#    Given the TenBridgeService is initialized with a valid token
-#    When I call the getPatientAlerts API with valid RequestMetaData and PatientAlertsRequestBody
-#    Then I should receive patient alerts
-#    And each alert should have valid details
-#
-#  Scenario: API call to patientAlertsApi.patientAlert(request) fails with a 400 or 500 response
-#    Given the TenBridgeService is initialized
-#    When the getPatientAlerts API is called and the API returns an error status
-#    Then an appropriate exception or error message should be logged
-#
-#  Scenario: Invalid token causes failure
-#    Given the TenBridgeService is initialized with an invalid token
-#    When I call the getPatientAlerts API with valid RequestMetaData and PatientAlertsRequestBody with invalid Token
-#    Then the API call should fail with an unauthorized error
-#
-#  Scenario: Build response fails
-#    Given the TenBridgeService is initialized
-#    When the getPatientAlerts API receives invalid data for response building
-#    Then an appropriate exception or error message should be logged at response
-#
-#  Scenario: API response returns empty list
-#    Given the TenBridgeService is initialized
-#    When the getPatientAlerts API returns an empty list
-#    Then an appropriate exception or error message should be logged for empty list
+
+  Scenario: ReferralSources - Successfully retrieve referral sources with valid set token
+    Given the TenBridgeService is initialized with a valid token For ReferralSources
+    When I call the getReferralSources API with siteID "621" and customerName "OpargoEpicTest" with valid Token
+    Then I should receive a list of ReferralSources
+    And each ReferralSource should have valid details
+
+  Scenario: ReferralSources - API call to referralSourcesApi.referralSource(meta) fails with a 400 or 500 response
+    Given the TenBridgeService is initialized For ReferralSources
+    When the getReferralSources API is called and the API returns an error status
+    Then an appropriate exception or error message should be logged For ReferralSources
+
+  Scenario: ReferralSources - Invalid token causes failure
+    Given the TenBridgeService is initialized with an invalid token For ReferralSources
+    When I call the getReferralSources API with siteID "621" and customerName "OpargoEpicTest" with invalid Token
+    Then the API call should fail with an unauthorized error For ReferralSources
+
+  Scenario: ReferralSources - Build response fails
+    Given the TenBridgeService is initialized For ReferralSources
+    When the getReferralSources API receives invalid data for response building
+    Then an appropriate exception or error message should be logged at response For ReferralSources
+
+  Scenario: ReferralSources - API response returns empty list
+    Given the TenBridgeService is initialized For ReferralSources
+ 		When the getReferralSources API returns an empty list
+    Then an appropriate exception or error message should be logged for empty list For ReferralSources
+
+### Scenarios for `getPatientAlerts` Method
+
+  Scenario: PatientAlerts - Successfully retrieve patient alerts with valid set token
+    Given the TenBridgeService is initialized with a valid token For PatientAlerts
+    When I call the getPatientAlerts API with siteID "621" and customerName "OpargoEpicTest" and patientProfileId "eTplvxRvcd-eT1nEI8BvQRQ3" with valid Token
+    Then I should receive patient alerts
+    And each alert should have valid details
+
+  Scenario: PatientAlerts - API call to patientAlertsApi.patientAlert(request) fails with a 400 or 500 response
+    Given the TenBridgeService is initialized For PatientAlerts
+    When the getPatientAlerts API is called and the API returns an error status
+    Then an appropriate exception or error message should be logged For PatientAlerts
+
+  Scenario: PatientAlerts - Invalid token causes failure
+    Given the TenBridgeService is initialized with an invalid token For PatientAlerts
+    When I call the getPatientAlerts API with invalid Token
+    Then the API call should fail with an unauthorized error For PatientAlerts
+ 
+  Scenario: PatientAlerts - Build response fails
+    Given the TenBridgeService is initialized For PatientAlerts
+    When the getPatientAlerts API receives invalid data for response building
+    Then an appropriate exception or error message should be logged at response For PatientAlerts
+
+  Scenario: PatientAlerts - API response returns empty list
+    Given the TenBridgeService is initialized For PatientAlerts
+    When the getPatientAlerts API returns an empty list
+    Then an appropriate exception or error message should be logged for empty list For PatientAlerts

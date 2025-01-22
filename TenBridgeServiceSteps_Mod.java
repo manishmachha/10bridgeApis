@@ -7,8 +7,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-
-import org.hibernate.validator.internal.util.privilegedactions.GetInstancesFromServiceLoader;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -17,22 +15,40 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 
 import com.ps.tenbridge.datahub.config.OAuth2Config;
 import com.ps.tenbridge.datahub.controllerImpl.TenBridgeService;
+import com.ps.tenbridge.datahub.dto.EthnicityDTO;
 import com.ps.tenbridge.datahub.dto.InsuranceDTO;
 import com.ps.tenbridge.datahub.dto.LocationDTO;
+import com.ps.tenbridge.datahub.dto.PatientAlertsDTO;
 import com.ps.tenbridge.datahub.dto.ProviderDTO;
+import com.ps.tenbridge.datahub.dto.RacesDTO;
+import com.ps.tenbridge.datahub.dto.ReferralSourcesDTO;
 import com.ps.tenbridge.datahub.dto.ReferringProviderDTO;
 import com.ps.tenbridge.datahub.services.authentication.TokenService;
 import com.veradigm.ps.tenbridge.client.ApiClient;
+import com.veradigm.ps.tenbridge.client.api.GetEthnicityValuesApi;
+import com.veradigm.ps.tenbridge.client.api.GetPatientAlertsApi;
 import com.veradigm.ps.tenbridge.client.api.GetPayorGroupsApi;
 import com.veradigm.ps.tenbridge.client.api.GetPracticeLocationsApi;
 import com.veradigm.ps.tenbridge.client.api.GetProvidersApi;
+import com.veradigm.ps.tenbridge.client.api.GetRaceValuesApi;
+import com.veradigm.ps.tenbridge.client.api.GetReferralSourcesApi;
 import com.veradigm.ps.tenbridge.client.api.GetReferringProvidersApi;
+import com.veradigm.ps.tenbridge.client.models.Ethnicity;
+import com.veradigm.ps.tenbridge.client.models.Ethnicity200Response;
 import com.veradigm.ps.tenbridge.client.models.InsuranceCarrier;
 import com.veradigm.ps.tenbridge.client.models.Location;
+import com.veradigm.ps.tenbridge.client.models.PatientAlert200Response;
+import com.veradigm.ps.tenbridge.client.models.PatientAlertsRequest;
+import com.veradigm.ps.tenbridge.client.models.PatientAlertsRequestBody;
+import com.veradigm.ps.tenbridge.client.models.PatientAlertsResponse;
 import com.veradigm.ps.tenbridge.client.models.PayorGroups200Response;
 import com.veradigm.ps.tenbridge.client.models.PracticeLocation200Response;
 import com.veradigm.ps.tenbridge.client.models.Practitioner;
 import com.veradigm.ps.tenbridge.client.models.Providers200Response;
+import com.veradigm.ps.tenbridge.client.models.Race;
+import com.veradigm.ps.tenbridge.client.models.Race200Response;
+import com.veradigm.ps.tenbridge.client.models.ReferralSource200Response;
+import com.veradigm.ps.tenbridge.client.models.ReferralSourcesResponse;
 import com.veradigm.ps.tenbridge.client.models.RequestMetaData;
 
 import io.cucumber.java.Before;
@@ -43,6 +59,9 @@ import io.cucumber.java.en.When;
 
 public class TenBridgeServiceSteps_Mod {
 
+	private RequestMetaData meta = new RequestMetaData();
+	private PatientAlertsRequestBody requestBody = new PatientAlertsRequestBody();
+
 	private List<ProviderDTO> providerResponse;
 
 	private List<ReferringProviderDTO> ReferringroviderResponse;
@@ -50,6 +69,14 @@ public class TenBridgeServiceSteps_Mod {
 	private List<LocationDTO> locationResponse;
 
 	private List<InsuranceDTO> insuranceResponse;
+
+	private List<EthnicityDTO> ethnicityResponse;
+
+	private List<RacesDTO> racesResponse;
+
+	private List<ReferralSourcesDTO> referralSourcesResponse;
+
+	private List<PatientAlertsDTO> patientAlertsResponse;
 
 	private Exception exception;
 
@@ -64,6 +91,18 @@ public class TenBridgeServiceSteps_Mod {
 
 	@Mock
 	private GetPayorGroupsApi payorGroupsApi;
+
+	@Mock
+	private GetEthnicityValuesApi ethnicityValuesApi;
+
+	@Mock
+	private GetRaceValuesApi racesApi;
+
+	@Mock
+	private GetReferralSourcesApi referralSourcesApi;
+
+	@Mock
+	private GetPatientAlertsApi patientAlertsApi;
 
 	@Mock
 	private OAuth2Config oauth;
@@ -95,7 +134,8 @@ public class TenBridgeServiceSteps_Mod {
 		when(ts.getToken(Mockito.any(ClientRegistration.class))).thenReturn("valid-token");
 
 		// Assign mocks to TenBridgeService
-		tenBridgeService = new TenBridgeService(apiClient, ts, oauth, providersApi, locationsApi, payorGroupsApi, referringProvidersApi);
+		tenBridgeService = new TenBridgeService(apiClient, ts, oauth, providersApi, locationsApi, payorGroupsApi,
+				referringProvidersApi, ethnicityValuesApi, racesApi, referralSourcesApi, patientAlertsApi);
 	}
 
 	/*********************************************************************************************************
@@ -160,7 +200,7 @@ public class TenBridgeServiceSteps_Mod {
 
 	@When("the getProviders API is called and the API returns an error status")
 	public void apiReturnsErrorStatusForGetProviders() {
-		RequestMetaData meta = Mockito.mock(RequestMetaData.class);
+		Mockito.mock(RequestMetaData.class);
 		when(providersApi.providers(Mockito.any(RequestMetaData.class))).thenThrow(new RuntimeException("API error"));
 
 		exception = null;
@@ -328,7 +368,7 @@ public class TenBridgeServiceSteps_Mod {
 
 	@When("the getLocations API is called and the API returns an error status")
 	public void getLocationsApiReturnsErrorStatus() {
-		RequestMetaData meta = Mockito.mock(RequestMetaData.class);
+		Mockito.mock(RequestMetaData.class);
 		when(locationsApi.practiceLocation(Mockito.any(RequestMetaData.class)))
 				.thenThrow(new RuntimeException("API error"));
 
@@ -472,7 +512,8 @@ public class TenBridgeServiceSteps_Mod {
 			assertNotNull(referringProvider.getIs_active(), "Referring provider's active status should not be null");
 			assertNotNull(referringProvider.getLastName(), "Referring provider's last name should not be null");
 			assertNotNull(referringProvider.getSpecialty(), "Referring provider's speciality should not be null");
-			assertNotNull(referringProvider.getReferringproviderid(), "Referring provider's practitioner id should not be null");
+			assertNotNull(referringProvider.getReferringproviderid(),
+					"Referring provider's practitioner id should not be null");
 			System.out.println(referringProvider);
 		}
 	}
@@ -485,7 +526,7 @@ public class TenBridgeServiceSteps_Mod {
 
 	@When("the getReferringProviders API is called and the API returns an error status")
 	public void getReferringProvidersApiReturnsErrorStatus() {
-		RequestMetaData meta = Mockito.mock(RequestMetaData.class);
+		Mockito.mock(RequestMetaData.class);
 		when(referringProvidersApi.referringProviders(Mockito.any(RequestMetaData.class)))
 				.thenThrow(new RuntimeException("API error"));
 
@@ -662,7 +703,7 @@ public class TenBridgeServiceSteps_Mod {
 
 	@When("the getInsurances API is called and the API returns an error status")
 	public void getInsurancesApiReturnsErrorStatus() {
-		RequestMetaData meta = Mockito.mock(RequestMetaData.class);
+		Mockito.mock(RequestMetaData.class);
 		when(payorGroupsApi.payorGroups(Mockito.any(RequestMetaData.class)))
 				.thenThrow(new RuntimeException("API error"));
 
@@ -751,6 +792,598 @@ public class TenBridgeServiceSteps_Mod {
 	public void verifyEmptyListErrorMessageLoggedForGetInsurances() {
 		assertNotNull(exception, "Exception should be thrown when API returns an empty list");
 		assertTrue(exception.getMessage().contains("Empty insurance list"),
+				"Exception message should indicate empty list error: " + exception.getMessage());
+	}
+
+	/*********************************************************************************************************
+	 * Ethnicities Test cases
+	 *********************************************************************************************************/
+
+	@Given("the TenBridgeService is initialized with a valid token For Ethnicities")
+	public void initializeWithVvalidTokenForGetEthnicities() {
+		// Ensure tenBridgeService is properly instantiated
+		assertNotNull(tenBridgeService, "TenBridgeService should be instantiated");
+
+		// Initialize the token (simulate the behavior)
+		tenBridgeService.setToken();
+
+		// Assert that the token has been set properly
+		assertNotNull(tenBridgeService.getOauth(), "OAuth2Config should not be null after setting token");
+	}
+
+	@When("I call the getEthnicities API with siteID {string} and customerName {string} with valid Token")
+	public void callGetEthnicitiesWithValidToken(String siteID, String customerName) {
+		Ethnicity200Response mockApiResponse = new Ethnicity200Response();
+		Ethnicity ethnicity1 = new Ethnicity();
+		ethnicity1.setEthnicityId(1);
+		ethnicity1.setEthnicity("Asian");
+		Ethnicity ethnicity2 = new Ethnicity();
+		ethnicity2.setEthnicityId(2);
+		ethnicity2.setEthnicity("Hispanic");
+		mockApiResponse.setEthnicities(List.of(ethnicity1, ethnicity2));
+		when(ethnicityValuesApi.ethnicity(Mockito.any())).thenReturn(mockApiResponse);
+		ethnicityResponse = tenBridgeService.getEthnicities(siteID, customerName);
+	}
+
+	@Then("I should receive a list of ethnicities")
+	public void verifyEthnicitiesResponse() {
+		assertNotNull(ethnicityResponse, "Ethnicities response should not be null");
+		assertFalse(ethnicityResponse.isEmpty(), "Ethnicities list should not be empty");
+	}
+
+	@And("each ethnicity should have valid details For Ethnicities")
+	public void each_ethnicities_should_have_valid_details() {
+		for (EthnicityDTO ethnicity : ethnicityResponse) {
+			assertNotNull(ethnicity.getEthnicityId(), "Ethnicity's id should not be null");
+			assertNotNull(ethnicity.getEthnicityName(), "Ethnicity's name should not be null");
+		}
+	}
+
+	@Given("the TenBridgeService is initialized For Ethnicities")
+	public void initializeTenBridgeServiceForGetEthnicities() {
+		// Initialize TenBridgeService as shown in the setUp method
+		setUp(); // Ensure this is correctly initializing tenBridgeService
+	}
+
+	@When("the getEthnicities API is called and the API returns an error status")
+	public void getEthnicitiesApiReturnsErrorStatus() {
+		Mockito.mock(RequestMetaData.class);
+		when(ethnicityValuesApi.ethnicity(Mockito.any(RequestMetaData.class)))
+				.thenThrow(new RuntimeException("API error"));
+
+		exception = null;
+		try {
+			tenBridgeService.getEthnicities("siteID", "customerName");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged For Ethnicities")
+	public void verifyErrorMessageLoggedForGetEthnicities() {
+		assertNotNull(exception, "Exception should be thrown when API returns an error status");
+		assertTrue(exception.getMessage().contains("Error occurred while retrieving Ethnicities"),
+				"Exception message should indicate the API error");
+	}
+
+	@Given("the TenBridgeService is initialized with an invalid token For Ethnicities")
+	public void initializeWithInvalidTokenForGetEthnicities() {
+		// Ensure tenBridgeService is properly instantiated
+		assertNotNull(tenBridgeService, "TenBridgeService should be instantiated");
+
+		// Initialize the token (simulate the behavior)
+		tenBridgeService.setToken();
+
+		// Assert that the token has been set properly
+		assertNotNull(tenBridgeService.getOauth(), "OAuth2Config should not be null after setting token");
+	}
+
+	@When("I call the getEthnicities API with siteID {string} and customerName {string} with invalid Token")
+	public void callGetEthnicitiesWithInvalidToken(String siteID, String customerName) {
+		when(ethnicityValuesApi.ethnicity(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
+
+		exception = null;
+		try {
+			tenBridgeService.getEthnicities(siteID, customerName);
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("the API call should fail with an unauthorized error For Ethnicities")
+	public void verifyUnauthorizedErrorForGetEthnicities() {
+		assertNotNull(exception, "Exception should be thrown when API returns an unauthorized error");
+		assertTrue(exception.getMessage().contains("Unauthorized"),
+				"Exception message should indicate unauthorized error");
+	}
+
+	@When("the getEthnicities API receives invalid data for response building")
+	public void getEthnicitiesApiReceivesInvalidDataForResponseBuilding() {
+		Ethnicity200Response mockApiResponse = Mockito.mock(Ethnicity200Response.class);
+		when(mockApiResponse.getEthnicities()).thenReturn(null); // Simulate invalid data
+		when(ethnicityValuesApi.ethnicity(Mockito.any(RequestMetaData.class))).thenReturn(mockApiResponse);
+
+		exception = null;
+		try {
+			tenBridgeService.getLocations("siteID", "customerName");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged at response For Ethnicities")
+	public void verifyInvalidDataErrorMessageLoggedForGetEthnicities() {
+		assertNotNull(exception, "Exception should be thrown when building response with invalid data");
+		assertTrue(exception.getMessage().contains("Invalid data received"),
+				"Exception message should indicate response building error: " + exception.getMessage());
+	}
+
+	@When("the getEthnicities API returns an empty list")
+	public void getEthnicitiesApiReturnsEmptyList() {
+		Ethnicity200Response mockApiResponse = new Ethnicity200Response();
+		mockApiResponse.setEthnicities(List.of()); // Simulate empty list
+		when(ethnicityValuesApi.ethnicity(Mockito.any(RequestMetaData.class))).thenReturn(mockApiResponse);
+
+		exception = null;
+		try {
+			ethnicityResponse = tenBridgeService.getEthnicities("siteID", "customerName");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged for empty list For Ethnicities")
+	public void verifyEmptyListErrorMessageLoggedForGetEthnicities() {
+		assertNotNull(exception, "Exception should be thrown when API returns an empty list");
+		assertTrue(exception.getMessage().contains("Empty Ethnicities list"),
+				"Exception message should indicate empty list error: " + exception.getMessage());
+	}
+
+	/*********************************************************************************************************
+	 * Races Test cases
+	 *********************************************************************************************************/
+
+	@Given("the TenBridgeService is initialized with a valid token For Races")
+	public void initializeWithVvalidTokenForGetRaces() {
+		// Ensure tenBridgeService is properly instantiated
+		assertNotNull(tenBridgeService, "TenBridgeService should be instantiated");
+
+		// Initialize the token (simulate the behavior)
+		tenBridgeService.setToken();
+
+		// Assert that the token has been set properly
+		assertNotNull(tenBridgeService.getOauth(), "OAuth2Config should not be null after setting token");
+	}
+
+	@When("I call the getRaces API with siteID {string} and customerName {string} with valid Token")
+	public void callGetRacesWithValidToken(String siteID, String customerName) {
+		Race200Response mockApiResponse = new Race200Response();
+		Race race1 = new Race();
+		race1.setRaceId(1);
+		race1.setRace("Marathon");
+		Race race2 = new Race();
+		race2.setRaceId(2);
+		race2.setRace("Sprint");
+		mockApiResponse.races(List.of(race1, race2));
+		when(racesApi.race(Mockito.any())).thenReturn(mockApiResponse);
+		racesResponse = tenBridgeService.getRaces(siteID, customerName);
+	}
+
+	@Then("I should receive a list of races")
+	public void verifyRacesResponse() {
+		assertNotNull(racesResponse, "Ethnicities response should not be null");
+		assertFalse(racesResponse.isEmpty(), "Ethnicities list should not be empty");
+	}
+
+	@And("each race should have valid details For Races")
+	public void each_race_should_have_valid_details() {
+		for (RacesDTO race : racesResponse) {
+			assertNotNull(race.getRaceId(), "Race's id should not be null");
+			assertNotNull(race.getRaceName(), "Race's name should not be null");
+		}
+	}
+
+	@Given("the TenBridgeService is initialized For Races")
+	public void initializeTenBridgeServiceForGetRaces() {
+		// Initialize TenBridgeService as shown in the setUp method
+		setUp(); // Ensure this is correctly initializing tenBridgeService
+	}
+
+	@When("the getRaces API is called and the API returns an error status")
+	public void getRacesApiReturnsErrorStatus() {
+		Mockito.mock(RequestMetaData.class);
+		when(racesApi.race(Mockito.any(RequestMetaData.class))).thenThrow(new RuntimeException("API error"));
+
+		exception = null;
+		try {
+			tenBridgeService.getRaces("siteID", "customerName");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged For Races")
+	public void verifyErrorMessageLoggedForGetRaces() {
+		assertNotNull(exception, "Exception should be thrown when API returns an error status");
+		assertTrue(exception.getMessage().contains("Error occurred while retrieving Races"),
+				"Exception message should indicate the API error");
+	}
+
+	@Given("the TenBridgeService is initialized with an invalid token For Races")
+	public void initializeWithInvalidTokenForGetRaces() {
+		// Ensure tenBridgeService is properly instantiated
+		assertNotNull(tenBridgeService, "TenBridgeService should be instantiated");
+
+		// Initialize the token (simulate the behavior)
+		tenBridgeService.setToken();
+
+		// Assert that the token has been set properly
+		assertNotNull(tenBridgeService.getOauth(), "OAuth2Config should not be null after setting token");
+	}
+
+	@When("I call the getRaces API with siteID {string} and customerName {string} with invalid Token")
+	public void callGetRacesWithInvalidToken(String siteID, String customerName) {
+		when(racesApi.race(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
+
+		exception = null;
+		try {
+			tenBridgeService.getRaces(siteID, customerName);
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("the API call should fail with an unauthorized error For Races")
+	public void verifyUnauthorizedErrorForGetRaces() {
+		assertNotNull(exception, "Exception should be thrown when API returns an unauthorized error");
+		assertTrue(exception.getMessage().contains("Unauthorized"),
+				"Exception message should indicate unauthorized error");
+	}
+
+	@When("the getRaces API receives invalid data for response building")
+	public void getRacesApiReceivesInvalidDataForResponseBuilding() {
+		Race200Response mockApiResponse = Mockito.mock(Race200Response.class);
+		when(mockApiResponse.getRaces()).thenReturn(null); // Simulate invalid data
+		when(racesApi.race(Mockito.any(RequestMetaData.class))).thenReturn(mockApiResponse);
+
+		exception = null;
+		try {
+			tenBridgeService.getRaces("siteID", "customerName");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged at response For Races")
+	public void verifyInvalidDataErrorMessageLoggedForGetRaces() {
+		assertNotNull(exception, "Exception should be thrown when building response with invalid data");
+		assertTrue(exception.getMessage().contains("Invalid data received"),
+				"Exception message should indicate response building error: " + exception.getMessage());
+	}
+
+	@When("the getRaces API returns an empty list")
+	public void getRacesApiReturnsEmptyList() {
+		Race200Response mockApiResponse = new Race200Response();
+		mockApiResponse.setRaces(List.of()); // Simulate empty list
+		when(racesApi.race(Mockito.any(RequestMetaData.class))).thenReturn(mockApiResponse);
+
+		exception = null;
+		try {
+			racesResponse = tenBridgeService.getRaces("siteID", "customerName");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged for empty list For Races")
+	public void verifyEmptyListErrorMessageLoggedForGetRaces() {
+		assertNotNull(exception, "Exception should be thrown when API returns an empty list");
+		assertTrue(exception.getMessage().contains("Empty Races list"),
+				"Exception message should indicate empty list error: " + exception.getMessage());
+	}
+
+	/*********************************************************************************************************
+	 * ReferralSources Test cases
+	 *********************************************************************************************************/
+
+	@Given("the TenBridgeService is initialized with a valid token For ReferralSources")
+	public void initializeWithVvalidTokenForGetReferralSources() {
+		// Ensure tenBridgeService is properly instantiated
+		assertNotNull(tenBridgeService, "TenBridgeService should be instantiated");
+
+		// Initialize the token (simulate the behavior)
+		tenBridgeService.setToken();
+
+		// Assert that the token has been set properly
+		assertNotNull(tenBridgeService.getOauth(), "OAuth2Config should not be null after setting token");
+	}
+
+	@When("I call the getReferralSources API with siteID {string} and customerName {string} with valid Token")
+	public void callGetReferralSourcesWithValidToken(String siteID, String customerName) {
+		ReferralSource200Response mockApiResponse = new ReferralSource200Response();
+		ReferralSourcesResponse referralSource1 = new ReferralSourcesResponse();
+		referralSource1.setReferralSourceId(1);
+		referralSource1.setAbbreviation("Marathon");
+		referralSource1.setDescription("Marathon");
+		ReferralSourcesResponse referralSource2 = new ReferralSourcesResponse();
+		referralSource2.setReferralSourceId(1);
+		referralSource2.setAbbreviation("Marathon");
+		referralSource2.setDescription("Marathon");
+		mockApiResponse.referralSources(List.of(referralSource1, referralSource2));
+		when(referralSourcesApi.referralSource(Mockito.any())).thenReturn(mockApiResponse);
+		referralSourcesResponse = tenBridgeService.getReferralSources(siteID, customerName);
+	}
+
+	@Then("I should receive a list of ReferralSources")
+	public void verifyReferralSourcesResponse() {
+		assertNotNull(referralSourcesResponse, "ReferralSources response should not be null");
+		assertFalse(referralSourcesResponse.isEmpty(), "ReferralSources list should not be empty");
+	}
+
+	@And("each ReferralSource should have valid details")
+	public void each_ReferralSource_should_have_valid_details() {
+		for (ReferralSourcesDTO referralSource : referralSourcesResponse) {
+			assertNotNull(referralSource.getReferral_source_id(), "referralSource's id should not be null");
+			assertNotNull(referralSource.getDescription(), "referralSource's description should not be null");
+		}
+	}
+
+	@Given("the TenBridgeService is initialized For ReferralSources")
+	public void initializeTenBridgeServiceForGetReferralSources() {
+		// Initialize TenBridgeService as shown in the setUp method
+		setUp(); // Ensure this is correctly initializing tenBridgeService
+	}
+
+	@When("the getReferralSources API is called and the API returns an error status")
+	public void getReferralSourcesApiReturnsErrorStatus() {
+		Mockito.mock(RequestMetaData.class);
+		when(referralSourcesApi.referralSource(Mockito.any(RequestMetaData.class)))
+				.thenThrow(new RuntimeException("API error"));
+
+		exception = null;
+		try {
+			tenBridgeService.getReferralSources("siteID", "customerName");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged For ReferralSources")
+	public void verifyErrorMessageLoggedForGetReferralSources() {
+		assertNotNull(exception, "Exception should be thrown when API returns an error status");
+		assertTrue(exception.getMessage().contains("Error occurred while retrieving ReferralSources"),
+				"Exception message should indicate the API error");
+	}
+
+	@Given("the TenBridgeService is initialized with an invalid token For ReferralSources")
+	public void initializeWithInvalidTokenForGetReferralSources() {
+		// Ensure tenBridgeService is properly instantiated
+		assertNotNull(tenBridgeService, "TenBridgeService should be instantiated");
+
+		// Initialize the token (simulate the behavior)
+		tenBridgeService.setToken();
+
+		// Assert that the token has been set properly
+		assertNotNull(tenBridgeService.getOauth(), "OAuth2Config should not be null after setting token");
+	}
+
+	@When("I call the getReferralSources API with siteID {string} and customerName {string} with invalid Token")
+	public void callGetReferralSourcesWithInvalidToken(String siteID, String customerName) {
+		when(referralSourcesApi.referralSource(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
+
+		exception = null;
+		try {
+			tenBridgeService.getReferralSources(siteID, customerName);
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("the API call should fail with an unauthorized error For ReferralSources")
+	public void verifyUnauthorizedErrorForGetReferralSources() {
+		assertNotNull(exception, "Exception should be thrown when API returns an unauthorized error");
+		assertTrue(exception.getMessage().contains("Unauthorized"),
+				"Exception message should indicate unauthorized error");
+	}
+
+	@When("the getReferralSources API receives invalid data for response building")
+	public void getReferralSourcesApiReceivesInvalidDataForResponseBuilding() {
+		ReferralSource200Response mockApiResponse = Mockito.mock(ReferralSource200Response.class);
+		when(mockApiResponse.getReferralSources()).thenReturn(null); // Simulate invalid data
+		when(referralSourcesApi.referralSource(Mockito.any(RequestMetaData.class))).thenReturn(mockApiResponse);
+
+		exception = null;
+		try {
+			tenBridgeService.getReferralSources("siteID", "customerName");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged at response For ReferralSources")
+	public void verifyInvalidDataErrorMessageLoggedForGetReferralSources() {
+		assertNotNull(exception, "Exception should be thrown when building response with invalid data");
+		assertTrue(exception.getMessage().contains("Invalid data received"),
+				"Exception message should indicate response building error: " + exception.getMessage());
+	}
+
+	@When("the getReferralSources API returns an empty list")
+	public void getReferralSourcesApiReturnsEmptyList() {
+		ReferralSource200Response mockApiResponse = new ReferralSource200Response();
+		mockApiResponse.setReferralSources(List.of()); // Simulate empty list
+		when(referralSourcesApi.referralSource(Mockito.any(RequestMetaData.class))).thenReturn(mockApiResponse);
+
+		exception = null;
+		try {
+			referralSourcesResponse = tenBridgeService.getReferralSources("siteID", "customerName");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged for empty list For ReferralSources")
+	public void verifyEmptyListErrorMessageLoggedForGetReferralSources() {
+		assertNotNull(exception, "Exception should be thrown when API returns an empty list");
+		assertTrue(exception.getMessage().contains("Empty ReferralSources list"),
+				"Exception message should indicate empty list error: " + exception.getMessage());
+	}
+
+	/*********************************************************************************************************
+	 * PatientAlerts Test cases
+	 *********************************************************************************************************/
+
+	@Given("the TenBridgeService is initialized with a valid token For PatientAlerts")
+	public void initializeWithVvalidTokenForGetPatientAlerts() {
+		// Ensure tenBridgeService is properly instantiated
+		assertNotNull(tenBridgeService, "TenBridgeService should be instantiated");
+
+		// Initialize the token (simulate the behavior)
+		tenBridgeService.setToken();
+
+		// Assert that the token has been set properly
+		assertNotNull(tenBridgeService.getOauth(), "OAuth2Config should not be null after setting token");
+	}
+
+	@When("I call the getPatientAlerts API with siteID {string} and customerName {string} and patientProfileId {string} with valid Token")
+	public void callGetPatientAlertsWithValidToken(String siteID, String customerName, String patientProfileId) {
+		PatientAlert200Response mockApiResponse = new PatientAlert200Response();
+		PatientAlertsResponse patientAlert1 = new PatientAlertsResponse();
+		patientAlert1.setPatient("John Doe");
+		patientAlert1.setDescription("Regular Checkup");
+		patientAlert1.setCategory("General");
+		patientAlert1.setPreventBooking(false);
+
+		PatientAlertsResponse patientAlert2 = new PatientAlertsResponse();
+		patientAlert2.setPatient("Jane Smith");
+		patientAlert2.setDescription("Dental Cleaning");
+		patientAlert2.setCategory("Dental");
+		patientAlert2.setPreventBooking(true);
+		mockApiResponse.patientAlerts(List.of(patientAlert1, patientAlert2));
+		when(patientAlertsApi.patientAlert(Mockito.any())).thenReturn(mockApiResponse);
+
+		meta.setSiteID(siteID);
+		meta.setCustomerName(customerName);
+		requestBody.setPatientId(patientProfileId);
+		requestBody.setPatientProfileId(patientProfileId);
+		patientAlertsResponse = tenBridgeService.getPatientAlerts(siteID, customerName, patientProfileId);
+	}
+
+	@Then("I should receive patient alerts")
+	public void verifyPatientAlertsResponse() {
+		assertNotNull(patientAlertsResponse, "PatientAlerts response should not be null");
+		assertFalse(patientAlertsResponse.equals(null), "PatientAlerts list should not be empty");
+	}
+
+	@And("each alert should have valid details")
+	public void each_patientAlert_should_have_valid_details() {
+		for (PatientAlertsDTO patientAlert : patientAlertsResponse) {
+			assertNotNull(patientAlert.getCategory(), "patientAlert's category should not be null");
+			assertNotNull(patientAlert.getDescription(), "patientAlert's description should not be null");
+			assertNotNull(patientAlert.getPatient(), "patientAlert's patient should not be null");
+			assertNotNull(patientAlert.getPreventBooking(), "patientAlert's prevent booking status should not be null");
+		}
+	}
+
+	@Given("the TenBridgeService is initialized For PatientAlerts")
+	public void initializeTenBridgeServiceForGetPatientAlerts() {
+		// Initialize TenBridgeService as shown in the setUp method
+		setUp(); // Ensure this is correctly initializing tenBridgeService
+	}
+
+	@When("the getPatientAlerts API is called and the API returns an error status")
+	public void getpatientAlertsApiReturnsErrorStatus() {
+		when(patientAlertsApi.patientAlert(Mockito.any(PatientAlertsRequest.class)))
+				.thenThrow(new RuntimeException("API error"));
+
+		exception = null;
+		try {
+			tenBridgeService.getPatientAlerts(meta.getSiteID(), meta.getCustomerName(),
+					requestBody.getPatientProfileId());
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged For PatientAlerts")
+	public void verifyErrorMessageLoggedForGetPatientAlerts() {
+		assertNotNull(exception, "Exception should be thrown when API returns an error status");
+		assertTrue(exception.getMessage().contains("Error occurred while retrieving PatientAlerts"),
+				"Exception message should indicate the API error");
+	}
+
+	@Given("the TenBridgeService is initialized with an invalid token For PatientAlerts")
+	public void initializeWithInvalidTokenForGetPatientAlerts() {
+		// Ensure tenBridgeService is properly instantiated
+		assertNotNull(tenBridgeService, "TenBridgeService should be instantiated");
+
+		// Initialize the token (simulate the behavior)
+		tenBridgeService.setToken();
+
+		// Assert that the token has been set properly
+		assertNotNull(tenBridgeService.getOauth(), "OAuth2Config should not be null after setting token");
+	}
+
+	@When("I call the getPatientAlerts API with invalid Token")
+	public void callGetPatientAlertsWithInvalidToken() {
+		when(patientAlertsApi.patientAlert(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
+
+		exception = null;
+		try {
+			tenBridgeService.getPatientAlerts(meta.getSiteID(), meta.getCustomerName(),
+					requestBody.getPatientProfileId());
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("the API call should fail with an unauthorized error For PatientAlerts")
+	public void verifyUnauthorizedErrorForGetPatientAlerts() {
+		assertNotNull(exception, "Exception should be thrown when API returns an unauthorized error");
+		assertTrue(exception.getMessage().contains("Unauthorized"),
+				"Exception message should indicate unauthorized error");
+	}
+
+	@When("the getPatientAlerts API receives invalid data for response building")
+	public void getpatientAlertsApiReceivesInvalidDataForResponseBuilding() {
+		PatientAlert200Response mockApiResponse = Mockito.mock(PatientAlert200Response.class);
+		when(mockApiResponse.getPatientAlerts()).thenReturn(null); // Simulate invalid data
+		when(patientAlertsApi.patientAlert(Mockito.any(PatientAlertsRequest.class))).thenReturn(mockApiResponse);
+
+		exception = null;
+		try {
+			tenBridgeService.getPatientAlerts(meta.getSiteID(), meta.getCustomerName(),
+					requestBody.getPatientProfileId());
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged at response For PatientAlerts")
+	public void verifyInvalidDataErrorMessageLoggedForGetPatientAlerts() {
+		assertNotNull(exception, "Exception should be thrown when building response with invalid data");
+		assertTrue(exception.getMessage().contains("Invalid data received"),
+				"Exception message should indicate response building error: " + exception.getMessage());
+	}
+
+	@When("the getPatientAlerts API returns an empty list")
+	public void getpatientAlertsApiReturnsEmptyList() {
+		PatientAlert200Response mockApiResponse = new PatientAlert200Response();
+		mockApiResponse.setPatientAlerts(List.of()); // Simulate empty list
+		when(patientAlertsApi.patientAlert(Mockito.any(PatientAlertsRequest.class))).thenReturn(mockApiResponse);
+
+		exception = null;
+		try {
+			tenBridgeService.getPatientAlerts(meta.getSiteID(), meta.getCustomerName(),
+					requestBody.getPatientProfileId());
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged for empty list For PatientAlerts")
+	public void verifyEmptyListErrorMessageLoggedForGetPatientAlerts() {
+		assertNotNull(exception, "Exception should be thrown when API returns an empty list");
+		assertTrue(exception.getMessage().contains("Empty PatientAlerts list"),
 				"Exception message should indicate empty list error: " + exception.getMessage());
 	}
 
