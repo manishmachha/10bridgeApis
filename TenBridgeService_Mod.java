@@ -81,82 +81,216 @@ public class TenBridgeService_Mod extends BaseService {
 		this.ts = ts;
 	}
 
+	public List<ProviderDTO> getProviders(String siteID, String customerName) {
+		try {
+			RequestMetaData meta = createRequestMetaData(siteID, customerName);
+			setToken();
+			Providers200Response apiResponse = providersApi.providers(meta);
+			if (apiResponse == null || apiResponse.getProviders() == null) {
+				logger.severe("Invalid data received: Providers list is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			}
+			if (apiResponse.getProviders().isEmpty()) {
+				logger.severe("API returned empty list");
+				throw new RuntimeException("Error occurred while retrieving providers: Empty provider list");
+			}
+			return buildResponse(apiResponse.getProviders(), PractitionerMapper.INSTANCE::practitionerToProviderDTO);
+		} catch (Exception e) {
+			logger.severe("Error occurred while retrieving providers: " + e.getMessage());
+			throw new RuntimeException("Error occurred while retrieving providers: " + e.getMessage(), e);
+		}
+	}
+
 	public List<GendersDTO> getGenders(String siteID, String customerName) {
-		RequestMetaData meta = createRequestMetaData(siteID, customerName);
-		setToken();
+		try {
+			RequestMetaData meta = createRequestMetaData(siteID, customerName);
+			setToken();
 
-		Gender200Response apiResponse = gendersApi.gender(meta);
-
-		return buildResponse(apiResponse.getGenders(), GenderMapper.INSTANCE::GenderToGendersDTO);
+			Gender200Response apiResponse = gendersApi.gender(meta);
+			if (apiResponse == null || apiResponse.getGenders() == null) {
+				logger.severe("Invalid data received: Genders list is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			}
+			if (apiResponse.getGenders().isEmpty()) {
+				logger.severe("API returned empty list");
+				throw new RuntimeException("Error occurred while retrieving genders: Empty gender list");
+			}
+			return buildResponse(apiResponse.getGenders(), GenderMapper.INSTANCE::GenderToGendersDTO);
+		} catch (Exception e) {
+			logger.severe("Error occurred while retrieving genders: " + e.getMessage());
+			throw new RuntimeException("Error occurred while retrieving genders: " + e.getMessage(), e);
+		}
 	}
 
 	public List<CPTsDTO> getCptCodes(String siteID, String customerName) {
-		RequestMetaData meta = createRequestMetaData(siteID, customerName);
-		setToken();
+		try {
+			RequestMetaData meta = createRequestMetaData(siteID, customerName);
+			setToken();
 
-		CPT200Response apiResponse = cptsApi.cPT(meta);
-
-		return buildResponse(apiResponse.getCpts(), CptMapper.INSTANCE::CptToCptsDTO);
+			CPT200Response apiResponse = cptsApi.cPT(meta);
+			if (apiResponse == null || apiResponse.getCpts() == null) {
+				logger.severe("Invalid data received: CPTs list is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			}
+			if (apiResponse.getCpts().isEmpty()) {
+				logger.severe("API returned empty list");
+				throw new RuntimeException("Error occurred while retrieving cpts: Empty cpt list");
+			}
+			return buildResponse(apiResponse.getCpts(), CptMapper.INSTANCE::CptToCptsDTO);
+		} catch (Exception e) {
+			logger.severe("Error occurred while retrieving cpts: " + e.getMessage());
+			throw new RuntimeException("Error occurred while retrieving cpts: " + e.getMessage(), e);
+		}
 	}
 
 	public List<ReferralSourcesDTO> getReferralSources(String siteID, String customerName) {
-		RequestMetaData meta = createRequestMetaData(siteID, customerName);
-		setToken();
+		try {
+			RequestMetaData meta = createRequestMetaData(siteID, customerName);
+			setToken();
 
-		ReferralSource200Response apiResponse = referralSourcesApi.referralSource(meta);
+			ReferralSource200Response apiResponse = referralSourcesApi.referralSource(meta);
+			if (apiResponse == null || apiResponse.getReferralSources() == null) {
+				logger.severe("Invalid data received: Referral sources list is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			}
+			if (apiResponse.getReferralSources().isEmpty()) {
+				logger.severe("API returned empty list");
+				throw new RuntimeException(
+						"Error occurred while retrieving referral sources: Empty referral sources list");
+			}
+			return buildResponse(apiResponse.getReferralSources(),
+					ReferralSourcesMapper.INSTANCE::ReferralSourcesToReferralSourcesDTO);
+		} catch (Exception e) {
+			logger.severe("Error occurred while retrieving referral sources: " + e.getMessage());
+			throw new RuntimeException("Error occurred while retrieving referral sources: " + e.getMessage(), e);
+		}
 
-		return buildResponse(apiResponse.getReferralSources(),
-				ReferralSourcesMapper.INSTANCE::ReferralSourcesToReferralSourcesDTO);
 	}
 
 	public List<CancelReasonsDTO> getCancelReasons(String siteID, String customerName) {
-		RequestMetaData meta = createRequestMetaData(siteID, customerName);
-		setToken();
+		try {
+			RequestMetaData meta = createRequestMetaData(siteID, customerName);
+			setToken();
 
-		CancellationReason200Response apiResponse = cancelReasonsApi.cancellationReason(meta);
-
-		return buildResponse(apiResponse.getCancelReasons(),
-				CancelReasonsMapper.INSTANCE::CancelReasonsToCancelReasonsDTO);
+			CancellationReason200Response apiResponse = cancelReasonsApi.cancellationReason(meta);
+			if (apiResponse == null || apiResponse.getCancelReasons() == null) {
+				logger.severe("Invalid data received: Cancel Reasons list is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			}
+			if (apiResponse.getCancelReasons().isEmpty()) {
+				logger.severe("API returned empty list");
+				throw new RuntimeException("Error occurred while retrieving Cancel Reasons: Empty Cancel Reasons list");
+			}
+			return buildResponse(apiResponse.getCancelReasons(),
+					CancelReasonsMapper.INSTANCE::CancelReasonsToCancelReasonsDTO);
+		} catch (Exception e) {
+			logger.severe("Error occurred while retrieving Cancel Reasons: " + e.getMessage());
+			throw new RuntimeException("Error occurred while retrieving Cancel Reasons: " + e.getMessage(), e);
+		}
 	}
 
 	public List<ChangeReasonsDTO> getChangeReasons(String siteID, String customerName) {
-		RequestMetaData meta = createRequestMetaData(siteID, customerName);
-		setToken();
+		try {
+			RequestMetaData meta = createRequestMetaData(siteID, customerName);
+			setToken();
 
-		ChangeReason200Response apiResponse = changeReasonsApi.changeReason(meta);
-
-		return buildResponse(apiResponse.getChangeReasons(),
-				ChangeReasonsMapper.INSTANCE::ChangeReasonsToChangeReasonsDTO);
+			ChangeReason200Response apiResponse = changeReasonsApi.changeReason(meta);
+			if (apiResponse == null || apiResponse.getChangeReasons() == null) {
+				logger.severe("Invalid data received: Change Reasons list is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			}
+			if (apiResponse.getChangeReasons().isEmpty()) {
+				logger.severe("API returned empty list");
+				throw new RuntimeException("Error occurred while retrieving Change Reasons: Empty Change Reasons list");
+			}
+			return buildResponse(apiResponse.getChangeReasons(),
+					ChangeReasonsMapper.INSTANCE::ChangeReasonsToChangeReasonsDTO);
+		} catch (Exception e) {
+			logger.severe("Error occurred while retrieving Change Reasons: " + e.getMessage());
+			throw new RuntimeException("Error occurred while retrieving Change Reasons: " + e.getMessage(), e);
+		}
 	}
 
 	public Object getPatientAlerts(RequestMetaData meta, PatientAlertsRequestBody body) {
-		PatientAlertsRequest patientAlertRequest = new PatientAlertsRequest();
-		patientAlertRequest.setMeta(meta);
-		patientAlertRequest.setBody(body);
-		setToken();
-		PatientAlert200Response apiResponse = patientAlertsApi.patientAlert(patientAlertRequest);
-		return apiResponse;
+		try {
+			PatientAlertsRequest patientAlertRequest = new PatientAlertsRequest();
+			patientAlertRequest.setMeta(meta);
+			patientAlertRequest.setBody(body);
+			setToken();
+			PatientAlert200Response apiResponse = patientAlertsApi.patientAlert(patientAlertRequest);
+			if (apiResponse == null || apiResponse.getPatientAlerts() == null) {
+				logger.severe("Invalid data received: Patient Alerts list is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			}
+			if (apiResponse.getPatientAlerts().isEmpty()) {
+				logger.severe("API returned empty list");
+				throw new RuntimeException("Error occurred while retrieving Patient Alerts: Empty Patient Alerts list");
+			}
+			return apiResponse;
+		} catch (Exception e) {
+			logger.severe("Error occurred while retrieving Patient Alerts: " + e.getMessage());
+			throw new RuntimeException("Error occurred while retrieving Patient Alerts: " + e.getMessage(), e);
+		}
 	}
 
 	public Object getAppointment(RequestMetaData meta, AppointmentSearchRequestData data) {
-		AppointmentSearchRequest appointmentSearchRequest = new AppointmentSearchRequest();
-		appointmentSearchRequest.setMeta(meta);
-		appointmentSearchRequest.setData(data);
-		setToken();
-		Appointments200Response apiResponse = appointmentsApi.appointments(appointmentSearchRequest);
-		return apiResponse;
+		try {
+			AppointmentSearchRequest appointmentSearchRequest = new AppointmentSearchRequest();
+			appointmentSearchRequest.setMeta(meta);
+			appointmentSearchRequest.setData(data);
+			setToken();
+			Appointments200Response apiResponse = appointmentsApi.appointments(appointmentSearchRequest);
+			if (apiResponse == null || apiResponse.getAppointment() == null) {
+				logger.severe("Invalid data received: Appointments list is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			}
+			if (apiResponse.getAppointment().isEmpty()) {
+				logger.severe("API returned empty list");
+				throw new RuntimeException("Error occurred while retrieving Appointments: Empty Appointments list");
+			}
+			return apiResponse;
+		} catch (Exception e) {
+			logger.severe("Error occurred while retrieving Appointments: " + e.getMessage());
+			throw new RuntimeException("Error occurred while retrieving Appointments: " + e.getMessage(), e);
+		}
 	}
 
 	public Object getSlots(SlotRequest slotRequest) {
-		setToken();
-		ProviderSlots200Response apiResponse = slotsApi.providerSlots(slotRequest);
-		return apiResponse;
+		try {
+			setToken();
+			ProviderSlots200Response apiResponse = slotsApi.providerSlots(slotRequest);
+			if (apiResponse == null || apiResponse.getSlots() == null) {
+				logger.severe("Invalid data received: Slots list is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			}
+			if (apiResponse.getSlots().isEmpty()) {
+				logger.severe("API returned empty list");
+				throw new RuntimeException("Error occurred while retrieving Slots: Empty Slots list");
+			}
+			return apiResponse;
+		} catch (Exception e) {
+			logger.severe("Error occurred while retrieving Slots: " + e.getMessage());
+			throw new RuntimeException("Error occurred while retrieving Slots: " + e.getMessage(), e);
+		}
 	}
 
 	public Object createPatient(PatientCreateRequest patientCreateRequest) {
-		setToken();
-		Patient apiResponse = createPatientApi.patient(patientCreateRequest);
-		return apiResponse;
+		try {
+			setToken();
+			Patient apiResponse = createPatientApi.patient(patientCreateRequest);
+			if (apiResponse == null || apiResponse.patient() == null) {
+				logger.severe("Invalid data received: Patient is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			}
+			if (apiResponse.patient().isEmpty()) {
+				logger.severe("API returned empty list");
+				throw new RuntimeException("Error occurred while creating Patient: Empty Patient data");
+			}
+			return apiResponse;
+		} catch (Exception e) {
+			logger.severe("Error occurred while creating Patient: " + e.getMessage());
+			throw new RuntimeException("Error occurred while creating Patient: " + e.getMessage(), e);
+		}
 	}
 
 	public void setToken() {
