@@ -39,6 +39,7 @@ import com.ps.tenbridge.datahub.services.authentication.TokenService;
 import com.ps.tenbridge.datahub.utility.BaseService;
 import com.veradigm.ps.tenbridge.client.ApiClient;
 import com.veradigm.ps.tenbridge.client.api.CreatePatientApi;
+import com.veradigm.ps.tenbridge.client.api.GetAppointmentTypesApi;
 import com.veradigm.ps.tenbridge.client.api.GetAppontmentsApi;
 import com.veradigm.ps.tenbridge.client.api.GetAvailableCancelReasonsApi;
 import com.veradigm.ps.tenbridge.client.api.GetAvailableChangeReasonsApi;
@@ -56,6 +57,8 @@ import com.veradigm.ps.tenbridge.client.api.GetReferringProvidersApi;
 import com.veradigm.ps.tenbridge.client.api.SearchPatientApi;
 import com.veradigm.ps.tenbridge.client.models.AppointmentSearchRequest;
 import com.veradigm.ps.tenbridge.client.models.AppointmentSearchRequestData;
+import com.veradigm.ps.tenbridge.client.models.AppointmentType;
+import com.veradigm.ps.tenbridge.client.models.AppointmentTypes200Response;
 import com.veradigm.ps.tenbridge.client.models.Appointments200Response;
 import com.veradigm.ps.tenbridge.client.models.CPT200Response;
 import com.veradigm.ps.tenbridge.client.models.CancellationReason200Response;
@@ -118,6 +121,8 @@ public class TenBridgeService extends BaseService {
 	private GetAvailableChangeReasonsApi changeReasonsApi;
 	@Autowired
 	private CreatePatientApi createPatientApi;
+	@Autowired
+	private GetAppointmentTypesApi appointmentTypesApi;
 
 	private final OAuth2Config oauth;
 
@@ -127,7 +132,8 @@ public class TenBridgeService extends BaseService {
 			GetRaceValuesApi raceValuesApi, GetReferralSourcesApi referralSourcesApi,
 			GetPatientAlertsApi patientAlertsApi, GetGenderValuesApi genderValuesApi, GetCptValuesApi cptsApi,
 			GetAvailableCancelReasonsApi cancelReasonsApi, GetAvailableChangeReasonsApi changeReasonsApi,
-			GetAppontmentsApi getAppontmentsApi, GetProviderSlotsApi providerSlotsApi, CreatePatientApi patientApi) {
+			GetAppontmentsApi getAppontmentsApi, GetProviderSlotsApi providerSlotsApi, CreatePatientApi patientApi,
+			SearchPatientApi searchPatientApi) {
 		this.apiClient = apiClient;
 		this.tokenService = ts;
 		this.oauth = oauth;
@@ -146,6 +152,7 @@ public class TenBridgeService extends BaseService {
 		this.appointmentsApi = getAppontmentsApi;
 		this.slotsApi = providerSlotsApi;
 		this.createPatientApi = patientApi;
+		this.searchPatient = searchPatientApi;
 	}
 
 	public List<ProviderDTO> getProviders(String siteID, String customerName) {
@@ -262,31 +269,38 @@ public class TenBridgeService extends BaseService {
 	}
 
 	public List<PatientInfoDTO> getPatients(String siteID, String customerName, String first_name, String last_name,
-			String date_of_birth) {
-		PatientRequest patientRequest = createPatientRequest(siteID, customerName, first_name, last_name,
-				date_of_birth);
-		setToken();
-		List<ProviderDTO> allProviders = new ArrayList<ProviderDTO>();
-		allProviders = getProviders(siteID, customerName);
+			String date_of_birth, String patientProfileId, String patientNumber) {
+		try {
+			PatientRequest patientRequest = createPatientRequest(siteID, customerName, first_name, last_name,
+					date_of_birth);
+			setToken();
+			List<ProviderDTO> allProviders = new ArrayList<ProviderDTO>();
+			allProviders = getProviders(siteID, customerName);
 
-		List<ReferringProviderDTO> allReferringProviders = new ArrayList<ReferringProviderDTO>();
-		allReferringProviders = getReferringProviders(siteID, customerName);
+			List<ReferringProviderDTO> allReferringProviders = new ArrayList<ReferringProviderDTO>();
+			allReferringProviders = getReferringProviders(siteID, customerName);
 
-		List<LocationDTO> allLocations = new ArrayList<LocationDTO>();
-		allLocations = getLocations(siteID, customerName);
+			List<LocationDTO> allLocations = new ArrayList<LocationDTO>();
+			allLocations = getLocations(siteID, customerName);
 
-		Patients200Response apiResponse = searchPatient.patients(patientRequest);
+			Patients200Response apiResponse = searchPatient.patients(patientRequest);
 
-		PatientInfoDTO patientInfo = new PatientInfoDTO();
-		patientInfo.setPrefDoc(allProviders.get(0));
-		patientInfo.setPrefLoc(allLocations.get(0));
-		patientInfo.setRefDoc(allReferringProviders.get(0));
-		List<PatientInfoDTO> response = PatientSearchMapper.INSTANCE.mapPatientsWithAdditionalFields(apiResponse,
-				allProviders, // List of providers
-				allLocations, // List of locations
-				allReferringProviders // List of referring providers
-		);
-		return response;
+			PatientInfoDTO patientInfo = new PatientInfoDTO();
+			patientInfo.setPrefDoc(allProviders.get(0));
+			patientInfo.setPrefLoc(allLocations.get(0));
+			patientInfo.setRefDoc(allReferringProviders.get(0));
+			patientInfo.setPatientProfileId(date_of_birth);
+			patientInfo.setPatientId(date_of_birth);
+			List<PatientInfoDTO> response = PatientSearchMapper.INSTANCE.mapPatientsWithAdditionalFields(apiResponse,
+					allProviders, // List of providers
+					allLocations, // List of locations
+					allReferringProviders // List of referring providers
+			);
+			return response;
+		} catch (Exception e) {
+			logger.severe("Error occurred while retrieving Ethnicities: " + e.getMessage());
+			throw new RuntimeException("Error occurred while retrieving Ethnicities: " + e.getMessage(), e);
+		}
 
 	}
 
@@ -501,11 +515,11 @@ public class TenBridgeService extends BaseService {
 		try {
 			setToken();
 			Patient apiResponse = createPatientApi.patient(patientCreateRequest);
-			if (apiResponse == null || apiResponse.getProfileId().isEmpty()) {
+			if (apiResponse == null || apiResponse.getPatientProfileID().isEmpty()) {
 				logger.severe("Invalid data received: Patient is null");
 				throw new RuntimeException("Error occurred while building response: Invalid data received");
 			}
-			if (apiResponse.getFirstName().isEmpty()) {
+			if (apiResponse.getPatientProfileID().isEmpty()) {
 				logger.severe("API returned empty list");
 				throw new RuntimeException("Error occurred while creating Patient: Empty Patient data");
 			}
@@ -513,6 +527,26 @@ public class TenBridgeService extends BaseService {
 		} catch (Exception e) {
 			logger.severe("Error occurred while creating Patient: " + e.getMessage());
 			throw new RuntimeException("Error occurred while creating Patient: " + e.getMessage(), e);
+		}
+	}
+
+	public List<AppointmentType> getAppointmentTypes(RequestMetaData meta) {
+		try {
+			setToken();
+			AppointmentTypes200Response apiResponse = appointmentTypesApi.appointmentTypes(meta);
+			if (apiResponse == null || apiResponse.getAppointmentTypes().isEmpty()) {
+				logger.severe("Invalid data received: AppointmentTypes is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			}
+			if (apiResponse.getAppointmentTypes().isEmpty()) {
+				logger.severe("API returned empty list");
+				throw new RuntimeException(
+						"Error occurred while retrieving AppointmentTypes: Empty AppointmentTypes data");
+			}
+			return apiResponse.getAppointmentTypes();
+		} catch (Exception e) {
+			logger.severe("Error occurred while retrieving AppointmentTypes: " + e.getMessage());
+			throw new RuntimeException("Error occurred while retrieving AppointmentTypes: " + e.getMessage(), e);
 		}
 	}
 

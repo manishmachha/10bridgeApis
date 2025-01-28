@@ -33,6 +33,8 @@ import com.veradigm.ps.tenbridge.client.api.GetReferralSourcesApi;
 import com.veradigm.ps.tenbridge.client.models.AppointmentSearchRequest;
 import com.veradigm.ps.tenbridge.client.models.AppointmentSearchRequestData;
 import com.veradigm.ps.tenbridge.client.models.Appointments200Response;
+import com.veradigm.ps.tenbridge.client.models.AppointmentType;
+import com.veradigm.ps.tenbridge.client.models.AppointmentTypes200Response;
 import com.veradigm.ps.tenbridge.client.models.CPT200Response;
 import com.veradigm.ps.tenbridge.client.models.CancellationReason200Response;
 import com.veradigm.ps.tenbridge.client.models.ChangeReason200Response;
@@ -68,11 +70,13 @@ public class TenBridgeService_Mod extends BaseService {
 	@Autowired
 	private GetProviderSlotsApi slotsApi;
 	@Autowired
-	private CreatePatientApi createPatientApi;
-	@Autowired
 	private GetAvailableCancelReasonsApi cancelReasonsApi;
 	@Autowired
 	private GetAvailableChangeReasonsApi changeReasonsApi;
+	@Autowired
+	private GetAppointmentTypesApi appointmentTypesApi;
+	@Autowired
+	private CreatePatientApi createPatientApi;
 	@Autowired
 	private OAuth2Config oauth;
 
@@ -290,6 +294,26 @@ public class TenBridgeService_Mod extends BaseService {
 		} catch (Exception e) {
 			logger.severe("Error occurred while creating Patient: " + e.getMessage());
 			throw new RuntimeException("Error occurred while creating Patient: " + e.getMessage(), e);
+		}
+	}
+
+	public List<AppointmentType> getAppointmentTypes(RequestMetaData meta) {
+		try {
+			setToken();
+			AppointmentTypes200Response apiResponse = appointmentTypesApi.appointmentTypes(meta);
+			if (apiResponse == null || apiResponse.getAppointmentTypes().isEmpty()) {
+				logger.severe("Invalid data received: AppointmentTypes is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			}
+			if (apiResponse.getAppointmentTypes().isEmpty()) {
+				logger.severe("API returned empty list");
+				throw new RuntimeException(
+						"Error occurred while retrieving AppointmentTypes: Empty AppointmentTypes data");
+			}
+			return apiResponse.getAppointmentTypes();
+		} catch (Exception e) {
+			logger.severe("Error occurred while retrieving AppointmentTypes: " + e.getMessage());
+			throw new RuntimeException("Error occurred while retrieving AppointmentTypes: " + e.getMessage(), e);
 		}
 	}
 

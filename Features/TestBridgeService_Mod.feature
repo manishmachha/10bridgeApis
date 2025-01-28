@@ -142,7 +142,7 @@ Feature: Ten Bridge Service Scenarios
     Given the TenBridgeService is initialized For Ethnicities
     When the getEthnicities API returns an empty list
     Then an appropriate exception or error message should be logged for empty list For Ethnicities
-#
+
 ### Scenarios for `getRaces` Method
 
   Scenario: Races - Successfully retrieve races with valid set token
@@ -170,7 +170,7 @@ Feature: Ten Bridge Service Scenarios
     Given the TenBridgeService is initialized For Races
     When the getRaces API returns an empty list
     Then an appropriate exception or error message should be logged for empty list For Races
-#
+
 ### Scenarios for `getReferralSources` Method
 
   Scenario: ReferralSources - Successfully retrieve referral sources with valid set token
@@ -367,4 +367,34 @@ Feature: Ten Bridge Service Scenarios
   Scenario: Appointments - API response returns empty list
     Given the TenBridgeService is initialized For Appointments
     When the getAppointments API returns an empty list
-    Then an appropriate exception or error message should be logged for empty list For Appointments      
+    Then an appropriate exception or error message should be logged for empty list For Appointments
+    
+    
+    
+### Scenarios for `getPatient` Method
+
+  Scenario: Patients - Successfully retrieve Patients with a valid token
+    Given the TenBridgeService is initialized with a valid token For Appointments
+    When I call the getPatient API with siteID "621" and customerName "OpargoEpicTest" and first_name "Opargotest" and last_name "Test" and date_of_birth "11-01-1995" with valid Token
+    Then I should receive a list of Patients
+    And each patient should have valid details
+
+  Scenario: Patients - API call fails with a 400 or 500 response
+    Given the TenBridgeService is initialized For Patients
+    When the getPatient API is called and the API returns an error status
+    Then an appropriate exception or error message should be logged For Patients
+
+  Scenario: Patients - Invalid token causes failure
+    Given the TenBridgeService is initialized with an invalid token For Patients
+    When I call the getPatient API with invalid Token
+    Then the API call should fail with an unauthorized error For Patients
+
+  Scenario: Patients - Build response fails
+    Given the TenBridgeService is initialized For Patients
+    When the getPatient API receives invalid data for response building
+    Then an appropriate exception or error message should be logged at response For Patients
+
+  Scenario: Patients - API response returns empty list
+    Given the TenBridgeService is initialized For Patients
+    When the getPatient API returns an empty list
+    Then an appropriate exception or error message should be logged for empty list For Patients          
