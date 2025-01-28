@@ -2335,7 +2335,7 @@ public class TenBridgeServiceSteps_Mod {
 		Patients200Response mockApiResponse = new Patients200Response();
 		// Dummy Object 1
 		Patient object1 = new Patient();
-		object1.setProfileId("P12345");
+		object1.setPatientProfileID("P12345");
 		object1.setPractitionerId(101);
 		object1.setInsurances(new ArrayList<InsurancePolicy>());
 		object1.setFirstName("John");
@@ -2353,7 +2353,7 @@ public class TenBridgeServiceSteps_Mod {
 
 		// Dummy Object 2
 		Patient object2 = new Patient();
-		object2.setProfileId("P67890");
+		object2.setPatientProfileID("P67890");
 		object2.setPractitionerId(102);
 		object2.setInsurances(new ArrayList<InsurancePolicy>());
 		object2.setFirstName("Jane");
@@ -2380,7 +2380,8 @@ public class TenBridgeServiceSteps_Mod {
 		patientRequest.setMeta(meta);
 		patientRequest.setData(patientRequestData);
 
-		patientsResponse = tenBridgeService.getPatients(siteID, customerName, first_name, last_name, date_of_birth);
+		patientsResponse = tenBridgeService.getPatients(siteID, customerName, first_name, last_name, date_of_birth,
+				first_name, first_name);
 	}
 
 	@Then("I should receive a list of Patients")
@@ -2414,7 +2415,8 @@ public class TenBridgeServiceSteps_Mod {
 		exception = null;
 		try {
 			tenBridgeService.getPatients(meta.getSiteID(), meta.getCustomerName(), patientRequestData.getFirstName(),
-					patientRequestData.getLastName(), patientRequestData.getDateOfBirth());
+					patientRequestData.getLastName(), patientRequestData.getDateOfBirth(),
+					patientRequestData.getFirstName(), patientRequestData.getFirstName());
 		} catch (Exception e) {
 			exception = e;
 		}
@@ -2441,12 +2443,19 @@ public class TenBridgeServiceSteps_Mod {
 
 	@When("I call the getPatient API with invalid Token")
 	public void callGetPatientsWithInvalidToken() {
+		when(providersApi.providers(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
+		when(locationsApi.practiceLocation(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
+		when(referringProvidersApi.referringProviders(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
 		when(searchPatientApi.patients(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
 
 		exception = null;
 		try {
+			tenBridgeService.getProviders(meta.getSiteID(), meta.getCustomerName());
+			tenBridgeService.getLocations(meta.getSiteID(), meta.getCustomerName());
+			tenBridgeService.getReferringProviders(meta.getSiteID(), meta.getCustomerName());
 			tenBridgeService.getPatients(meta.getSiteID(), meta.getCustomerName(), patientRequestData.getFirstName(),
-					patientRequestData.getLastName(), patientRequestData.getDateOfBirth());
+					patientRequestData.getLastName(), patientRequestData.getDateOfBirth(),
+					patientRequestData.getFirstName(), patientRequestData.getFirstName());
 		} catch (Exception e) {
 			exception = e;
 		}
@@ -2468,7 +2477,8 @@ public class TenBridgeServiceSteps_Mod {
 		exception = null;
 		try {
 			tenBridgeService.getPatients(meta.getSiteID(), meta.getCustomerName(), patientRequestData.getFirstName(),
-					patientRequestData.getLastName(), patientRequestData.getDateOfBirth());
+					patientRequestData.getLastName(), patientRequestData.getDateOfBirth(),
+					patientRequestData.getFirstName(), patientRequestData.getFirstName());
 			;
 		} catch (Exception e) {
 			exception = e;
@@ -2484,15 +2494,30 @@ public class TenBridgeServiceSteps_Mod {
 
 	@When("the getPatient API returns an empty list")
 	public void getPatientsApiReturnsEmptyList() {
+		Providers200Response mockApiResponse1 = new Providers200Response();
+		mockApiResponse1.setProviders(List.of()); // Simulate empty list
+		when(providersApi.providers(Mockito.any(RequestMetaData.class))).thenReturn(mockApiResponse1);
+
+		PracticeLocation200Response mockApiResponse2 = new PracticeLocation200Response();
+		mockApiResponse2.setLocations(List.of()); // Simulate empty list
+		when(locationsApi.practiceLocation(Mockito.any(RequestMetaData.class))).thenReturn(mockApiResponse2);
+
+		Providers200Response mockApiResponse3 = new Providers200Response();
+		mockApiResponse3.setProviders(List.of()); // Simulate empty list
+		when(referringProvidersApi.referringProviders(Mockito.any(RequestMetaData.class))).thenReturn(mockApiResponse3);
+
 		Patients200Response mockApiResponse = new Patients200Response();
 		mockApiResponse.setPatients(List.of()); // Simulate empty list
 		when(searchPatientApi.patients(Mockito.any(PatientRequest.class))).thenReturn(mockApiResponse);
 
 		exception = null;
 		try {
+			tenBridgeService.getProviders(meta.getSiteID(), meta.getCustomerName());
+			tenBridgeService.getLocations(meta.getSiteID(), meta.getCustomerName());
+			tenBridgeService.getReferringProviders(meta.getSiteID(), meta.getCustomerName());
 			tenBridgeService.getPatients(meta.getSiteID(), meta.getCustomerName(), patientRequestData.getFirstName(),
-					patientRequestData.getLastName(), patientRequestData.getDateOfBirth());
-			;
+					patientRequestData.getLastName(), patientRequestData.getDateOfBirth(),
+					patientRequestData.getFirstName(), patientRequestData.getFirstName());
 		} catch (Exception e) {
 			exception = e;
 		}
@@ -2501,7 +2526,11 @@ public class TenBridgeServiceSteps_Mod {
 	@Then("an appropriate exception or error message should be logged for empty list For Patients")
 	public void verifyEmptyListErrorMessageLoggedForGetPatients() {
 		assertNotNull(exception, "Exception should be thrown when API returns an empty list");
-		assertTrue(exception.getMessage().contains("Empty Patients list"),
+		assertTrue(
+				exception.getMessage().contains("Empty Patients list")
+						|| exception.getMessage().contains("Empty provider list")
+						|| exception.getMessage().contains("Empty location list")
+						|| exception.getMessage().contains("Empty Referring provider list"),
 				"Exception message should indicate empty Patients error: " + exception.getMessage());
 	}
 

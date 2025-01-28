@@ -1,7 +1,5 @@
 package com.ps.tenbridge.datahub.controller;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
@@ -21,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ps.tenbridge.datahub.controllerImpl.TenBridgeService;
 import com.ps.tenbridge.datahub.utility.EncryptionHelper;
 import com.ps.tenbridge.datahub.utility.EncryptionKeyConstants;
-import com.veradigm.ps.tenbridge.client.models.SlotRequest;
 
 @RestController
 @RequestMapping("/api")
@@ -71,20 +68,38 @@ public class TenBridgeController {
 		return processRequest(request, List.of("siteID", "customerName"), "races",
 				(siteID, customerName) -> tenBridgeService.getRaces(siteID, customerName));
 	}
+	
+	@PostMapping("/cancel-reasons")
+	public ResponseEntity<Object> getCancelReasons(@RequestBody Map<String, String> request) {
+		return processRequest(request, List.of("siteID", "customerName"), "cancelReasons",
+				(siteID, customerName) -> tenBridgeService.getCancelReasons(siteID, customerName));
+	}
+
+	@PostMapping("/change-reasons")
+	public ResponseEntity<Object> getChangeReasons(@RequestBody Map<String, String> request) {
+		return processRequest(request, List.of("siteID", "customerName"), "changeReasons",
+				(siteID, customerName) -> tenBridgeService.getChangeReasons(siteID, customerName));
+	}
+	
+	@PostMapping("/referral-sources")
+	public ResponseEntity<Object> getReferralSources(@RequestBody Map<String, String> request) {
+		return processRequest(request, List.of("siteID", "customerName"), "referralSources",
+				(siteID, customerName) -> tenBridgeService.getReferralSources(siteID, customerName));
+	}
 
 	@PostMapping("/patient-search")
 	public ResponseEntity<Object> getPatient(@RequestBody Map<String, String> request) {
- 
+
 		try {
 			// Validate required fields in PatientRequest
- 
+
 			if (request.get("siteID") == null || request.get("siteID").isEmpty() || request.get("customerName") == null
 					|| request.get("customerName").isEmpty() || request.get("last") == null
 					|| request.get("last").isEmpty() || request.get("dob") == null || request.get("dob").isEmpty()
 					|| request.get("transactionId") == null || request.get("transactionId").isEmpty()) {
 				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
 			}
- 
+
 			// Extract values after validation
 			String siteID = request.get("siteID");
 			String customerName = request.get("customerName");
@@ -94,37 +109,36 @@ public class TenBridgeController {
 			String tid = request.get("transactionId");
 			String patientProfileId = request.get("patientProfileId");
 			String patientNumber = request.get("patientNumber");
- 
+
 			if (request.get("patientProfileId") != null // existing patient
 					&& !request.get("patientProfileId").isEmpty()) {
 				patientProfileId = EncryptionHelper.decrypt(patientProfileId, EncryptionKeyConstants.SSO_ENCRYPTION_KEY);
 				
-				//patient Number
+				//patient Number 
 			} else if (request.get("patientNumber") != null && !request.get("patientNumber").isEmpty()) {
 				patientNumber = request.get("patientNumber");
 				
 			}
- 
+
 			try {
- 
+
 			} catch (DateTimeParseException e) {
 				return new ResponseEntity<Object>("Invalid date format: " + e.getMessage(),
 						HttpStatus.INTERNAL_SERVER_ERROR);
 			}
- 
+
 			// Fetch patients
 			Object patients = tenBridgeService.getPatients(siteID, customerName, firstName, lastName, dateOfBirth,patientProfileId,patientNumber);
- 
+
 			return createSuccessResponseforPatientSearch("patients", patients, tid);
- 
+
 		} catch (Exception e) {
 			e.printStackTrace();
 			return new ResponseEntity<Object>("Error occured while retreiving patients",
 					HttpStatus.INTERNAL_SERVER_ERROR);
 		}
- 
+
 	}
- 
 	
 	@PostMapping("/slots")
 	public ResponseEntity<Object> getSlots(@RequestBody Map<String, String> request) {
@@ -173,6 +187,8 @@ public class TenBridgeController {
 		}
 	}
 
+	
+	
 	public List<String> validateAttributes(Map<String, String> request, List<String> requiredAttributes) {
 		return requiredAttributes.stream()
 				.filter(attr -> !request.containsKey(attr) || request.get(attr) == null || request.get(attr).isEmpty())
@@ -221,14 +237,14 @@ public class TenBridgeController {
 			month = dateString.substring(0, dateString.indexOf("-"));
 			day = dateString.substring(dateString.indexOf("-") + 1,
 					dateString.lastIndexOf("-"));
- 
+
 			if (day.length() <= 1) {
 				day = "0" + day;
 			}
 			if (month.length() <= 1) {
 				month = "0" + month;
 			}
- 
+
 			parsedDate = year + "-" + month + "-" + day;
 		}
 		return parsedDate;

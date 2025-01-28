@@ -257,8 +257,7 @@ public class TenBridgeService extends BaseService {
 			}
 			if (apiResponse.getEthnicities().isEmpty()) {
 				logger.severe("API returned empty list");
-				throw new RuntimeException(
-						"Error occurred while retrieving referring providers: Empty Ethnicities list");
+				throw new RuntimeException("Error occurred while retrieving ethnicities: Empty Ethnicities list");
 			}
 			return buildResponse(apiResponse.getEthnicities(), EthnicityMapper.INSTANCE::EthnicityToEthnicityDTO);
 
@@ -280,10 +279,19 @@ public class TenBridgeService extends BaseService {
 			List<ReferringProviderDTO> allReferringProviders = new ArrayList<ReferringProviderDTO>();
 			allReferringProviders = getReferringProviders(siteID, customerName);
 
+
 			List<LocationDTO> allLocations = new ArrayList<LocationDTO>();
 			allLocations = getLocations(siteID, customerName);
 
 			Patients200Response apiResponse = searchPatient.patients(patientRequest);
+			if (apiResponse == null || apiResponse.getPatients() == null) {
+				logger.severe("Invalid data received: Patients list is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			}
+			if (apiResponse.getPatients().isEmpty()) {
+				logger.severe("API returned empty list");
+				throw new RuntimeException("Error occurred while retrieving Patients: Empty Patients list");
+			}
 
 			PatientInfoDTO patientInfo = new PatientInfoDTO();
 			patientInfo.setPrefDoc(allProviders.get(0));
@@ -298,8 +306,8 @@ public class TenBridgeService extends BaseService {
 			);
 			return response;
 		} catch (Exception e) {
-			logger.severe("Error occurred while retrieving Ethnicities: " + e.getMessage());
-			throw new RuntimeException("Error occurred while retrieving Ethnicities: " + e.getMessage(), e);
+			logger.severe("Error occurred while retrieving Patients: " + e.getMessage());
+			throw new RuntimeException("Error occurred while retrieving Patients: " + e.getMessage(), e);
 		}
 
 	}
