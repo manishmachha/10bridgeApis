@@ -69,6 +69,7 @@ import com.veradigm.ps.tenbridge.client.models.PatientAlert200Response;
 import com.veradigm.ps.tenbridge.client.models.PatientAlertsRequest;
 import com.veradigm.ps.tenbridge.client.models.PatientAlertsRequestBody;
 import com.veradigm.ps.tenbridge.client.models.PatientAlertsResponse;
+import com.veradigm.ps.tenbridge.client.models.PatientCreateRequest;
 import com.veradigm.ps.tenbridge.client.models.PatientRequest;
 import com.veradigm.ps.tenbridge.client.models.PatientRequestData;
 import com.veradigm.ps.tenbridge.client.models.Patients200Response;
@@ -123,6 +124,8 @@ public class TenBridgeServiceSteps_Mod {
 	private List<Appointment> appointmentsResponse;
 
 	private List<PatientInfoDTO> patientsResponse;
+
+	private Patient createPatientResponse;
 
 	private Exception exception;
 
@@ -2190,11 +2193,11 @@ public class TenBridgeServiceSteps_Mod {
 
 	@When("I call the getAppointments API with invalid Token")
 	public void callGetAppointmentsWithInvalidToken() {
-		when(cptValuesApi.cPT(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
+		when(appontmentsApi.appointments(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
 
 		exception = null;
 		try {
-			tenBridgeService.getCptCodes(meta.getSiteID(), meta.getCustomerName());
+			tenBridgeService.getAppointment(meta, appointmentSearchRequestData);
 		} catch (Exception e) {
 			exception = e;
 		}
@@ -2250,7 +2253,7 @@ public class TenBridgeServiceSteps_Mod {
 	}
 
 	/*********************************************************************************************************
-	 * Patients Test cases
+	 * Patient Search Test cases
 	 *********************************************************************************************************/
 
 	@Given("the TenBridgeService is initialized with a valid token For Patients")
@@ -2532,6 +2535,181 @@ public class TenBridgeServiceSteps_Mod {
 						|| exception.getMessage().contains("Empty location list")
 						|| exception.getMessage().contains("Empty Referring provider list"),
 				"Exception message should indicate empty Patients error: " + exception.getMessage());
+	}
+
+	/*********************************************************************************************************
+	 * CreatePatient Test cases
+	 *********************************************************************************************************/
+
+	@Given("the TenBridgeService is initialized with a valid token For CreatePatient")
+	public void initializeWithVvalidTokenForGetCreatePatient() {
+		// Ensure tenBridgeService is properly instantiated
+		assertNotNull(tenBridgeService, "TenBridgeService should be instantiated");
+
+		// Initialize the token (simulate the behavior)
+		tenBridgeService.setToken();
+
+		// Assert that the token has been set properly
+		assertNotNull(tenBridgeService.getOauth(), "OAuth2Config should not be null after setting token");
+	}
+
+	@When("I call the createPatient API with the following details and a valid Token")
+	public void callGetCreatePatientWithValidToken(String siteID, String customerName, String first_name,
+			String last_name, String middle_name, String date_of_birth, String gender, String phone,
+			String address_line1, String address_line2, String state, String city, String zip, String email) {
+
+		Patient mockApiResponse = new Patient();
+		Patient dummyPatient = new Patient();
+		dummyPatient.setFirstName(first_name);
+		dummyPatient.setLastName(last_name);
+		dummyPatient.setMiddleName(middle_name);
+		dummyPatient.setDateOfBirth(date_of_birth);
+		dummyPatient.setGender(gender);
+		dummyPatient.setPhone(phone);
+		dummyPatient.setAddressLine1(address_line1);
+		dummyPatient.setAddressLine2(address_line2);
+		dummyPatient.setState(state);
+		dummyPatient.setCity(city);
+		dummyPatient.setZip(zip);
+		dummyPatient.setEmail(email);
+
+		when(createPatientApi.patient(Mockito.any())).thenReturn(mockApiResponse);
+
+		meta.setSiteID(siteID);
+		meta.setCustomerName(customerName);
+		createPatientResponse = dummyPatient;
+	}
+
+	@Then("I should receive a data of CreatePatient")
+	public void verifyCreatePatientResponse() {
+		assertNotNull(createPatientResponse, "CreatePatient response should not be null");
+		assertFalse(createPatientResponse.equals(null), "CreatePatient list should not be empty");
+	}
+
+	@And("created patient should have valid details")
+	public void each_CreatePatient_should_have_valid_details() {
+
+		assertNotNull(createPatientResponse.getPatientId(), "Patient Id should not be null");
+		assertNotNull(createPatientResponse.getPatientId(), "Patient Id should not be null");
+		assertNotNull(createPatientResponse.getFirstName(), "First Name should not be null");
+		assertNotNull(createPatientResponse.getLastName(), "Last Name should not be null");
+		assertNotNull(createPatientResponse.getMiddleName(), "Middle Name should not be null");
+		assertNotNull(createPatientResponse.getDateOfBirth(), "Date of Birth should not be null");
+		assertNotNull(createPatientResponse.getGender(), "Gender should not be null");
+		assertNotNull(createPatientResponse.getPhone(), "Phone should not be null");
+		assertNotNull(createPatientResponse.getAddressLine1(), "Address Line 1 should not be null");
+		assertNotNull(createPatientResponse.getAddressLine2(), "Address Line 2 should not be null");
+		assertNotNull(createPatientResponse.getState(), "State should not be null");
+		assertNotNull(createPatientResponse.getCity(), "City should not be null");
+		assertNotNull(createPatientResponse.getZip(), "Zip should not be null");
+		assertNotNull(createPatientResponse.getEmail(), "Email should not be null");
+
+	}
+
+	@Given("the TenBridgeService is initialized For CreatePatient")
+	public void initializeTenBridgeServiceForGetCreatePatient() {
+		// Initialize TenBridgeService as shown in the setUp method
+		setUp(); // Ensure this is correctly initializing tenBridgeService
+	}
+
+	@When("the createPatient API is called and the API returns an error status")
+	public void getCreatePatientApiReturnsErrorStatus() {
+		when(createPatientApi.patient(Mockito.any(PatientCreateRequest.class)))
+				.thenThrow(new RuntimeException("API error"));
+
+		exception = null;
+		try {
+			tenBridgeService.createPatient(meta.getSiteID(), meta.getCustomerName(), "Manish", "Machha", "Kumar",
+					"1995-07-23", "Male", "123-569-7485", "123 Vishal heights", "Road no 4", "VD", "Texas", "56231",
+					"aslk@kls.cpm");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged For CreatePatient")
+	public void verifyErrorMessageLoggedForGetCreatePatient() {
+		assertNotNull(exception, "Exception should be thrown when API returns an error status");
+		assertTrue(exception.getMessage().contains("Error occurred while creating Patient"),
+				"Exception message should indicate the API error");
+	}
+
+	@Given("the TenBridgeService is initialized with an invalid token For CreatePatient")
+	public void initializeWithInvalidTokenForGetCreatePatient() {
+		// Ensure tenBridgeService is properly instantiated
+		assertNotNull(tenBridgeService, "TenBridgeService should be instantiated");
+
+		// Initialize the token (simulate the behavior)
+		tenBridgeService.setToken();
+
+		// Assert that the token has been set properly
+		assertNotNull(tenBridgeService.getOauth(), "OAuth2Config should not be null after setting token");
+	}
+
+	@When("I call the createPatient API with invalid Token")
+	public void callGetCreatePatientWithInvalidToken() {
+		when(createPatientApi.patient(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
+
+		exception = null;
+		try {
+			tenBridgeService.createPatient(meta.getSiteID(), meta.getCustomerName(), "Manish", "Machha", "Kumar",
+					"1995-07-23", "Male", "123-569-7485", "123 Vishal heights", "Road no 4", "VD", "Texas", "56231",
+					"aslk@kls.cpm");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("the API call should fail with an unauthorized error For CreatePatient")
+	public void verifyUnauthorizedErrorForGetCreatePatient() {
+		assertNotNull(exception, "Exception should be thrown when API returns an unauthorized error");
+		assertTrue(exception.getMessage().contains("Unauthorized"),
+				"Exception message should indicate unauthorized error");
+	}
+
+	@When("the createPatient API receives invalid data for response building")
+	public void getCreatePatientApiReceivesInvalidDataForResponseBuilding() {
+		Patient mockApiResponse = Mockito.mock(Patient.class);
+		when(mockApiResponse.getPatientProfileID()).thenReturn(null); // Simulate invalid data
+		when(createPatientApi.patient(Mockito.any(PatientCreateRequest.class))).thenReturn(mockApiResponse);
+
+		exception = null;
+		try {
+			tenBridgeService.createPatient(meta.getSiteID(), meta.getCustomerName(), "Manish", "Machha", "Kumar",
+					"1995-07-23", "Male", "123-569-7485", "123 Vishal heights", "Road no 4", "VD", "Texas", "56231",
+					"aslk@kls.cpm");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged at response For CreatePatient")
+	public void verifyInvalidDataErrorMessageLoggedForGetCreatePatient() {
+		assertNotNull(exception, "Exception should be thrown when building response with invalid data");
+		assertTrue(exception.getMessage().contains("Invalid data received"),
+				"Exception message should indicate response building error: " + exception.getMessage());
+	}
+
+	@When("the createPatient API returns an empty data")
+	public void getCreatePatientApiReturnsEmptyList() {
+		Patient mockApiResponse = new Patient();
+		when(createPatientApi.patient(Mockito.any(PatientCreateRequest.class))).thenReturn(mockApiResponse);
+
+		exception = null;
+		try {
+			tenBridgeService.createPatient(meta.getSiteID(), meta.getCustomerName(), "Manish", "Machha", "Kumar",
+					"1995-07-23", "Male", "123-569-7485", "123 Vishal heights", "Road no 4", "VD", "Texas", "56231",
+					"aslk@kls.cpm");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged for empty data For CreatePatient")
+	public void verifyEmptyListErrorMessageLoggedForGetCreatePatient() {
+		assertNotNull(exception, "Exception should be thrown when API returns an empty list");
+		assertTrue(exception.getMessage().contains("Empty Patient data"),
+				"Exception message should indicate empty CreatePatient error: " + exception.getMessage());
 	}
 
 }

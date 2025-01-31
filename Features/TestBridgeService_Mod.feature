@@ -398,3 +398,46 @@ Feature: Ten Bridge Service Scenarios
     Given the TenBridgeService is initialized For Patients
     When the getPatient API returns an empty list
     Then an appropriate exception or error message should be logged for empty list For Patients          
+    
+### Scenarios for `createPatient` Method
+
+  Scenario: CreatePatient - Successfully retrieve CreatePatient with a valid token
+    Given the TenBridgeService is initialized with a valid token For Appointments
+  | key            | value            |
+  | siteID         | 621              |
+  | customerName   | OpargoEpicTest   |
+  | first_name     | Manish           |
+  | last_name      | Machha           |
+  | middle_name    | Kumar            |
+  | date_of_birth  | 1995-07-23       |
+  | gender         | Male             |
+  | phone          | 123-569-7485     |
+  | address_line_1 | 123 Vishal heights |
+  | address_line_2 | Road no 4        |
+  | state          | VD               |
+  | city           | Texas            |
+  | zip            | 56231            |
+  | email          | aslk@kls.cpm     |
+    When I call the createPatient API with the following details and a valid Token
+		Then I should receive a data of CreatePatient
+    And created patient should have valid details
+
+  Scenario: CreatePatient - API call fails with a 400 or 500 response
+    Given the TenBridgeService is initialized For CreatePatient
+    When the createPatient API is called and the API returns an error status
+    Then an appropriate exception or error message should be logged For CreatePatient
+
+  Scenario: CreatePatient - Invalid token causes failure
+    Given the TenBridgeService is initialized with an invalid token For CreatePatient
+    When I call the createPatient API with invalid Token
+    Then the API call should fail with an unauthorized error For CreatePatient
+
+  Scenario: CreatePatient - Build response fails
+    Given the TenBridgeService is initialized For CreatePatient
+    When the createPatient API receives invalid data for response building
+    Then an appropriate exception or error message should be logged at response For CreatePatient
+
+  Scenario: CreatePatient - API response returns empty data
+    Given the TenBridgeService is initialized For CreatePatient
+    When the createPatient API returns an empty data
+    Then an appropriate exception or error message should be logged for empty data For CreatePatient

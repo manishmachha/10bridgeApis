@@ -146,7 +146,7 @@ public class TenBridgeController_Mod {
 			ResponseEntity<Object> validationResponse = validateRequiredFields(patientCreateRequest, requiredFields);
 			if (validationResponse.getStatusCode() == HttpStatus.BAD_REQUEST) {
 				return validationResponse;
-			}
+			}	
 			Object patientObject = tenBridgeServicemod.createPatient(patientCreateRequest);
 			return new ResponseEntity<>(patientObject, HttpStatus.OK);
 		} catch (Exception e) {
