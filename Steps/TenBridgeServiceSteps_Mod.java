@@ -2166,7 +2166,7 @@ public class TenBridgeServiceSteps_Mod {
 
 		exception = null;
 		try {
-			tenBridgeService.getAppointment(meta, appointmentSearchRequestData);
+			tenBridgeService.getAppointment(meta.getSiteID(),meta.getCustomerName(),"e63wRTbPfr1p8UW81d8Seiw3");
 		} catch (Exception e) {
 			exception = e;
 		}
@@ -2197,7 +2197,7 @@ public class TenBridgeServiceSteps_Mod {
 
 		exception = null;
 		try {
-			tenBridgeService.getAppointment(meta, appointmentSearchRequestData);
+			tenBridgeService.getAppointment(meta.getSiteID(),meta.getCustomerName(),"e63wRTbPfr1p8UW81d8Seiw3");
 		} catch (Exception e) {
 			exception = e;
 		}
@@ -2218,7 +2218,7 @@ public class TenBridgeServiceSteps_Mod {
 
 		exception = null;
 		try {
-			tenBridgeService.getAppointment(meta, appointmentSearchRequestData);
+			tenBridgeService.getAppointment(meta.getSiteID(),meta.getCustomerName(),"e63wRTbPfr1p8UW81d8Seiw3");
 		} catch (Exception e) {
 			exception = e;
 		}
@@ -2239,7 +2239,7 @@ public class TenBridgeServiceSteps_Mod {
 
 		exception = null;
 		try {
-			tenBridgeService.getAppointment(meta, appointmentSearchRequestData);
+			tenBridgeService.getAppointment(meta.getSiteID(),meta.getCustomerName(),"e63wRTbPfr1p8UW81d8Seiw3");
 		} catch (Exception e) {
 			exception = e;
 		}

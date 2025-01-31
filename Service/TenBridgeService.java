@@ -515,14 +515,17 @@ public class TenBridgeService extends BaseService {
 		}
 	}
 
-	public Object getAppointment(RequestMetaData meta, AppointmentSearchRequestData data) {
+	public Object getAppointment(String siteID, String customerName, String patient_id) {
 		try {
+			RequestMetaData meta = createRequestMetaData(siteID, customerName);
+			AppointmentSearchRequestData data = new AppointmentSearchRequestData();
+			data.setPatientId(patient_id);
 			AppointmentSearchRequest appointmentSearchRequest = new AppointmentSearchRequest();
 			appointmentSearchRequest.setMeta(meta);
 			appointmentSearchRequest.setData(data);
 			setToken();
 			Appointments200Response apiResponse = appointmentsApi.appointments(appointmentSearchRequest);
-			if (apiResponse == null || apiResponse.getAppointments() == null) {
+			if (apiResponse == null || apiResponse.getAppointments().isEmpty()) {
 				logger.severe("Invalid data received: Appointments list is null");
 				throw new RuntimeException("Error occurred while building response: Invalid data received");
 			}

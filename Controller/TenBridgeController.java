@@ -217,6 +217,26 @@ public class TenBridgeController {
 					HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
+	
+	@PostMapping("/appointments")
+	public ResponseEntity<Object> getAppointment( @RequestBody Map<String, String> request) {
+		try {
+			if (request.get("siteID") == null || request.get("siteID").isEmpty()
+					|| request.get("customerName") == null || request.get("customerName").isEmpty()
+					|| request.get("patient_id") == null
+					|| request.get("patient_id").isEmpty()) {
+				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
+			}
+			Object appointment = tenBridgeService.getAppointment(request.get("siteID"),
+					request.get("customerName"),
+					request.get("patient_id"));
+			return new ResponseEntity<>(appointment, HttpStatus.OK);
+		} catch (Exception e) {
+			logger.error("Error occurred while retrieving appointment", e);
+			return new ResponseEntity<>("Error occurred while retrieving appointment",
+					HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+	}
 
 	@PostMapping("/cancel-appointment")
 	public ResponseEntity<Object> cancelAppointment(@RequestBody Map<String, String> request) {
