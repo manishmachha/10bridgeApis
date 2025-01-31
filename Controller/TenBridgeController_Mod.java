@@ -61,20 +61,16 @@ public class TenBridgeController_Mod {
 	}
 
 	@PostMapping("/patient-alerts")
-	public ResponseEntity<Object> getPatientAlerts(@RequestBody PatientAlertsRequest patientAlertsRequest) {
+	public ResponseEntity<Object> getPatientAlerts(@RequestBody Map<String, String> request) {
 		try {
-			// Validate required fields
-			List<String> requiredFields = List.of("meta", "body", "siteID", "customerName", "body.patientProfileId");
-			ResponseEntity<Object> validationResponse = validateRequiredFields(patientAlertsRequest, requiredFields);
-
-			if (validationResponse.getStatusCode() == HttpStatus.BAD_REQUEST) {
-				return validationResponse;
+			if (request.get("siteID") == null || request.get("siteID").isEmpty()
+					|| request.get("patientProfileId") == null
+					|| request.get("patientProfileId").isEmpty()) {
+				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
 			}
-
-			// Process request
-			RequestMetaData meta = patientAlertsRequest.getMeta();
-			PatientAlertsRequestBody body = patientAlertsRequest.getBody();
-			Object patientAlerts = tenBridgeServicemod.getPatientAlerts(meta, body);
+			Object patientAlerts = tenBridgeServicemod.getPatientAlerts(request.get("siteID"),
+					request.get("customerName"),
+					request.get("patientProfileId"));
 			return new ResponseEntity<>(patientAlerts, HttpStatus.OK);
 		} catch (Exception e) {
 			logger.error("Error occurred while retrieving patient alerts", e);
@@ -146,7 +142,7 @@ public class TenBridgeController_Mod {
 			ResponseEntity<Object> validationResponse = validateRequiredFields(patientCreateRequest, requiredFields);
 			if (validationResponse.getStatusCode() == HttpStatus.BAD_REQUEST) {
 				return validationResponse;
-			}	
+			}
 			Object patientObject = tenBridgeServicemod.createPatient(patientCreateRequest);
 			return new ResponseEntity<>(patientObject, HttpStatus.OK);
 		} catch (Exception e) {

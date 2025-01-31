@@ -215,25 +215,29 @@ public class TenBridgeService_Mod extends BaseService {
 		}
 	}
 
-	public Object getPatientAlerts(RequestMetaData meta, PatientAlertsRequestBody body) {
+	public Object getPatientAlerts(String siteID, String customerName, String patientProfileId) {
 		try {
+			RequestMetaData meta = createRequestMetaData(siteID, customerName);
+			PatientAlertsRequestBody body = new PatientAlertsRequestBody();
+			body.setPatientProfileId(patientProfileId);
 			PatientAlertsRequest patientAlertRequest = new PatientAlertsRequest();
 			patientAlertRequest.setMeta(meta);
 			patientAlertRequest.setBody(body);
 			setToken();
 			PatientAlert200Response apiResponse = patientAlertsApi.patientAlert(patientAlertRequest);
 			if (apiResponse == null || apiResponse.getPatientAlerts() == null) {
-				logger.severe("Invalid data received: Patient Alerts list is null");
+				logger.severe("Invalid data received: PatientAlerts list is null");
 				throw new RuntimeException("Error occurred while building response: Invalid data received");
 			}
-			if (apiResponse.getPatientAlerts().isEmpty()) {
+			if (apiResponse.getChangeReasons().isEmpty()) {
 				logger.severe("API returned empty list");
-				throw new RuntimeException("Error occurred while retrieving Patient Alerts: Empty Patient Alerts list");
+				throw new RuntimeException("Error occurred while retrieving PatientAlerts: Empty PatientAlerts list");
 			}
-			return apiResponse;
+			return buildResponse(apiResponse.getChangeReasons(),
+					ChangeReasonsMapper.INSTANCE::ChangeReasonsToChangeReasonsDTO);
 		} catch (Exception e) {
-			logger.severe("Error occurred while retrieving Patient Alerts: " + e.getMessage());
-			throw new RuntimeException("Error occurred while retrieving Patient Alerts: " + e.getMessage(), e);
+			logger.severe("Error occurred while retrieving PatientAlerts: " + e.getMessage());
+			throw new RuntimeException("Error occurred while retrieving PatientAlerts: " + e.getMessage(), e);
 		}
 	}
 
