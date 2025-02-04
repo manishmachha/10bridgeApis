@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,6 +97,32 @@ public class TenBridgeController {
 	public ResponseEntity<Object> getReferralSources(@RequestBody Map<String, String> request) {
 		return processRequest(request, List.of("siteID", "customerName"), "referralSources",
 				(siteID, customerName) -> tenBridgeService.getReferralSources(siteID, customerName));
+	}
+	
+	@PostMapping("/patient-alerts")
+	public ResponseEntity<Object> getPatientAlerts(@RequestBody Map<String, String> request) {
+		try {
+			// Validate required fields in PatientAlerts
+			boolean missingFields = Stream.of("siteID", "customerName", "patientProfileId")
+					.anyMatch(field -> request.get(field) == null || request.get(field).isEmpty());
+ 
+			if (missingFields) {
+				return new ResponseEntity<>("Invalid request: required fields missing", HttpStatus.BAD_REQUEST);
+			}
+ 
+			// Extract values after validation
+			String siteID = request.get("siteID");
+			String customerName = request.get("customerName");
+			String patientProfileId = request.get("patientProfileId");
+			Object patientAlerts = tenBridgeService.getPatientAlerts(siteID, customerName, patientProfileId);
+			Map<String, Object> responseBody = new HashMap<>();
+			responseBody.put("body", patientAlerts);
+			return new ResponseEntity<>(responseBody, HttpStatus.OK);
+		} catch (Exception e) {
+			logger.error("Error occurred while retrieving PatientAlerts", e);
+			return new ResponseEntity<>("Error occurred while retrieving PatientAlerts",
+					HttpStatus.INTERNAL_SERVER_ERROR);
+		}
 	}
 
 	@PostMapping("/patient-search")

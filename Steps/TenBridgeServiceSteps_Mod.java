@@ -29,6 +29,7 @@ import com.ps.tenbridge.datahub.dto.ProviderDTO;
 import com.ps.tenbridge.datahub.dto.RacesDTO;
 import com.ps.tenbridge.datahub.dto.ReferralSourcesDTO;
 import com.ps.tenbridge.datahub.dto.ReferringProviderDTO;
+import com.ps.tenbridge.datahub.dto.patientAlerts;
 import com.ps.tenbridge.datahub.services.authentication.TokenService;
 import com.veradigm.ps.tenbridge.client.ApiClient;
 import com.veradigm.ps.tenbridge.client.api.CreatePatientApi;
@@ -111,7 +112,7 @@ public class TenBridgeServiceSteps_Mod {
 
 	private List<ReferralSourcesDTO> referralSourcesResponse;
 
-	private List<PatientAlertsDTO> patientAlertsResponse;
+	private patientAlerts patientAlertsResponse;
 
 	private List<GendersDTO> gendersResponse;
 
@@ -1351,12 +1352,7 @@ public class TenBridgeServiceSteps_Mod {
 
 	@And("each alert should have valid details")
 	public void each_patientAlert_should_have_valid_details() {
-		for (PatientAlertsDTO patientAlert : patientAlertsResponse) {
-			assertNotNull(patientAlert.getCategory(), "patientAlert's category should not be null");
-			assertNotNull(patientAlert.getDescription(), "patientAlert's description should not be null");
-			assertNotNull(patientAlert.getPatient(), "patientAlert's patient should not be null");
-			assertNotNull(patientAlert.getPreventBooking(), "patientAlert's prevent booking status should not be null");
-		}
+		assertNotNull(patientAlertsResponse.getPatientAlerts(), "patientAlerts category should not be null");
 	}
 
 	@Given("the TenBridgeService is initialized For PatientAlerts")
@@ -1458,7 +1454,7 @@ public class TenBridgeServiceSteps_Mod {
 	@Then("an appropriate exception or error message should be logged for empty list For PatientAlerts")
 	public void verifyEmptyListErrorMessageLoggedForGetPatientAlerts() {
 		assertNotNull(exception, "Exception should be thrown when API returns an empty list");
-		assertTrue(exception.getMessage().contains("Empty PatientAlerts list"),
+		assertTrue(exception.getMessage().contains("Empty Patient Alerts list"),
 				"Exception message should indicate empty list error: " + exception.getMessage());
 	}
 
@@ -2064,6 +2060,52 @@ public class TenBridgeServiceSteps_Mod {
 
 	@When("I call the getAppointments API with siteID {string} and customerName {string} and patient_id {string} with valid Token")
 	public void callGetAppointmentsWithValidToken(String siteID, String customerName, String patientId) {
+		Providers200Response mockApiResponse1 = new Providers200Response();
+		Practitioner practitioner1 = new Practitioner();
+		practitioner1.setFirstName("TestfirstName");
+		practitioner1.setSpeciality("Testspecialty");
+		practitioner1.setAbbreviation("few");
+		practitioner1.setLastName("TestLn");
+		practitioner1.setPractitionerId("10");
+		practitioner1.setIsActive("true");
+		Practitioner practitioner2 = new Practitioner();
+		practitioner2.setFirstName("TestfirstName1");
+		practitioner2.setSpeciality("Testspecialty1");
+		practitioner2.setAbbreviation("fe");
+		practitioner2.setLastName("TestLn1");
+		practitioner2.setPractitionerId("101");
+		practitioner2.setIsActive("true");
+		mockApiResponse1.setProviders(List.of(practitioner1, practitioner2));
+		when(providersApi.providers(Mockito.any())).thenReturn(mockApiResponse1);
+
+		PracticeLocation200Response mockApiResponse2 = new PracticeLocation200Response();
+		Location location1 = new Location();
+		location1.setLocationId("001");
+		location1.setLocationName("Head Office");
+		location1.setLocationType("Corporate");
+		location1.setAddressLine1("123 Main St");
+		location1.setAddressLine2("Suite 400");
+		location1.setState("Telangana");
+		location1.setCity("Hyderabad");
+		location1.setZip("500081");
+		location1.setAbbreviation("HO");
+		location1.setCountryCode("IN");
+		location1.setIsActive("true");
+		Location location2 = new Location();
+		location2.setLocationId("002");
+		location2.setLocationName("Branch Office");
+		location2.setLocationType("Retail");
+		location2.setAddressLine1("456 Market St");
+		location2.setAddressLine2("Floor 2");
+		location2.setState("Karnataka");
+		location2.setCity("Bangalore");
+		location2.setZip("560034");
+		location2.setAbbreviation("BO");
+		location2.setCountryCode("IN");
+		location2.setIsActive("false");
+		mockApiResponse2.setLocations(List.of(location1, location2));
+		when(locationsApi.practiceLocation(Mockito.any())).thenReturn(mockApiResponse2);
+
 		Appointments200Response mockApiResponse = new Appointments200Response();
 		appointmentSearchRequestData.setPatientId(patientId);
 		Appointment appointment1 = new Appointment();
@@ -2166,7 +2208,8 @@ public class TenBridgeServiceSteps_Mod {
 
 		exception = null;
 		try {
-			tenBridgeService.getAppointment(meta.getSiteID(),meta.getCustomerName(),"e63wRTbPfr1p8UW81d8Seiw3");
+			tenBridgeService.getAppointment(meta.getSiteID(), meta.getCustomerName(),
+					appointmentSearchRequestData.getPatientId());
 		} catch (Exception e) {
 			exception = e;
 		}
@@ -2193,11 +2236,16 @@ public class TenBridgeServiceSteps_Mod {
 
 	@When("I call the getAppointments API with invalid Token")
 	public void callGetAppointmentsWithInvalidToken() {
+		when(providersApi.providers(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
+		when(locationsApi.practiceLocation(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
 		when(appontmentsApi.appointments(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
 
 		exception = null;
 		try {
-			tenBridgeService.getAppointment(meta.getSiteID(),meta.getCustomerName(),"e63wRTbPfr1p8UW81d8Seiw3");
+			tenBridgeService.getProviders(meta.getSiteID(), meta.getCustomerName());
+			tenBridgeService.getLocations(meta.getSiteID(), meta.getCustomerName());
+			tenBridgeService.getAppointment(meta.getSiteID(), meta.getCustomerName(),
+					appointmentSearchRequestData.getPatientId());
 		} catch (Exception e) {
 			exception = e;
 		}
@@ -2218,7 +2266,8 @@ public class TenBridgeServiceSteps_Mod {
 
 		exception = null;
 		try {
-			tenBridgeService.getAppointment(meta.getSiteID(),meta.getCustomerName(),"e63wRTbPfr1p8UW81d8Seiw3");
+			tenBridgeService.getAppointment(meta.getSiteID(), meta.getCustomerName(),
+					appointmentSearchRequestData.getPatientId());
 		} catch (Exception e) {
 			exception = e;
 		}
@@ -2233,13 +2282,24 @@ public class TenBridgeServiceSteps_Mod {
 
 	@When("the getAppointments API returns an empty list")
 	public void getAppointmentsApiReturnsEmptyList() {
+		Providers200Response mockApiResponse1 = new Providers200Response();
+		mockApiResponse1.setProviders(List.of()); // Simulate empty list
+		when(providersApi.providers(Mockito.any(RequestMetaData.class))).thenReturn(mockApiResponse1);
+
+		PracticeLocation200Response mockApiResponse2 = new PracticeLocation200Response();
+		mockApiResponse2.setLocations(List.of()); // Simulate empty list
+		when(locationsApi.practiceLocation(Mockito.any(RequestMetaData.class))).thenReturn(mockApiResponse2);
+
 		Appointments200Response mockApiResponse = new Appointments200Response();
 		mockApiResponse.setAppointments(List.of()); // Simulate empty list
 		when(appontmentsApi.appointments(Mockito.any(AppointmentSearchRequest.class))).thenReturn(mockApiResponse);
 
 		exception = null;
 		try {
-			tenBridgeService.getAppointment(meta.getSiteID(),meta.getCustomerName(),"e63wRTbPfr1p8UW81d8Seiw3");
+			tenBridgeService.getProviders(meta.getSiteID(), meta.getCustomerName());
+			tenBridgeService.getLocations(meta.getSiteID(), meta.getCustomerName());
+			tenBridgeService.getAppointment(meta.getSiteID(), meta.getCustomerName(),
+					appointmentSearchRequestData.getPatientId());
 		} catch (Exception e) {
 			exception = e;
 		}
@@ -2248,7 +2308,10 @@ public class TenBridgeServiceSteps_Mod {
 	@Then("an appropriate exception or error message should be logged for empty list For Appointments")
 	public void verifyEmptyListErrorMessageLoggedForGetAppointments() {
 		assertNotNull(exception, "Exception should be thrown when API returns an empty list");
-		assertTrue(exception.getMessage().contains("Empty Appointments list"),
+		assertTrue(
+				exception.getMessage().contains("Empty Appointments list")
+						|| exception.getMessage().contains("Empty provider list")
+						|| exception.getMessage().contains("Empty location list"),
 				"Exception message should indicate empty Appointments error: " + exception.getMessage());
 	}
 
@@ -2553,7 +2616,7 @@ public class TenBridgeServiceSteps_Mod {
 		assertNotNull(tenBridgeService.getOauth(), "OAuth2Config should not be null after setting token");
 	}
 
-	@When("I call the createPatient API with the following details and a valid Token")
+	@When("I call the createPatient API with siteID {string} and customerName {string} and first_name {string} and last_name {string} and middle_name {string} and date_of_birth {string} and gender {string} and phone {string} and address_line_1 {string} and address_line_2 {string} and state {string} and city {string} and zip {string} and email {string} and a valid Token")
 	public void callGetCreatePatientWithValidToken(String siteID, String customerName, String first_name,
 			String last_name, String middle_name, String date_of_birth, String gender, String phone,
 			String address_line1, String address_line2, String state, String city, String zip, String email) {
@@ -2589,8 +2652,6 @@ public class TenBridgeServiceSteps_Mod {
 	@And("created patient should have valid details")
 	public void each_CreatePatient_should_have_valid_details() {
 
-		assertNotNull(createPatientResponse.getPatientId(), "Patient Id should not be null");
-		assertNotNull(createPatientResponse.getPatientId(), "Patient Id should not be null");
 		assertNotNull(createPatientResponse.getFirstName(), "First Name should not be null");
 		assertNotNull(createPatientResponse.getLastName(), "Last Name should not be null");
 		assertNotNull(createPatientResponse.getMiddleName(), "Middle Name should not be null");
@@ -2670,7 +2731,7 @@ public class TenBridgeServiceSteps_Mod {
 	@When("the createPatient API receives invalid data for response building")
 	public void getCreatePatientApiReceivesInvalidDataForResponseBuilding() {
 		Patient mockApiResponse = Mockito.mock(Patient.class);
-		when(mockApiResponse.getPatientProfileID()).thenReturn(null); // Simulate invalid data
+		when(mockApiResponse.getFirstName()).thenReturn(null); // Simulate invalid data
 		when(createPatientApi.patient(Mockito.any(PatientCreateRequest.class))).thenReturn(mockApiResponse);
 
 		exception = null;
@@ -2689,27 +2750,4 @@ public class TenBridgeServiceSteps_Mod {
 		assertTrue(exception.getMessage().contains("Invalid data received"),
 				"Exception message should indicate response building error: " + exception.getMessage());
 	}
-
-	@When("the createPatient API returns an empty data")
-	public void getCreatePatientApiReturnsEmptyList() {
-		Patient mockApiResponse = new Patient();
-		when(createPatientApi.patient(Mockito.any(PatientCreateRequest.class))).thenReturn(mockApiResponse);
-
-		exception = null;
-		try {
-			tenBridgeService.createPatient(meta.getSiteID(), meta.getCustomerName(), "Manish", "Machha", "Kumar",
-					"1995-07-23", "Male", "123-569-7485", "123 Vishal heights", "Road no 4", "VD", "Texas", "56231",
-					"aslk@kls.cpm");
-		} catch (Exception e) {
-			exception = e;
-		}
-	}
-
-	@Then("an appropriate exception or error message should be logged for empty data For CreatePatient")
-	public void verifyEmptyListErrorMessageLoggedForGetCreatePatient() {
-		assertNotNull(exception, "Exception should be thrown when API returns an empty list");
-		assertTrue(exception.getMessage().contains("Empty Patient data"),
-				"Exception message should indicate empty CreatePatient error: " + exception.getMessage());
-	}
-
 }

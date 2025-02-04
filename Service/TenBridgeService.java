@@ -9,6 +9,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.stereotype.Service;
 
 import com.ps.tenbridge.datahub.config.OAuth2Config;
+import com.ps.tenbridge.datahub.dto.AppointmentInfoDTO;
 import com.ps.tenbridge.datahub.dto.CPTsDTO;
 import com.ps.tenbridge.datahub.dto.CancelReasonsDTO;
 import com.ps.tenbridge.datahub.dto.ChangeReasonsDTO;
@@ -22,6 +23,7 @@ import com.ps.tenbridge.datahub.dto.ProviderDTO;
 import com.ps.tenbridge.datahub.dto.RacesDTO;
 import com.ps.tenbridge.datahub.dto.ReferralSourcesDTO;
 import com.ps.tenbridge.datahub.dto.ReferringProviderDTO;
+import com.ps.tenbridge.datahub.dto.patientAlerts;
 import com.ps.tenbridge.datahub.mapper.CancelReasonsMapper;
 import com.ps.tenbridge.datahub.mapper.CarrierMapper;
 import com.ps.tenbridge.datahub.mapper.ChangeReasonsMapper;
@@ -30,6 +32,7 @@ import com.ps.tenbridge.datahub.mapper.EthnicityMapper;
 import com.ps.tenbridge.datahub.mapper.GenderMapper;
 import com.ps.tenbridge.datahub.mapper.LocationMapper;
 import com.ps.tenbridge.datahub.mapper.PatientAlertsMapper;
+import com.ps.tenbridge.datahub.mapper.PatientAppointmentsMapper;
 import com.ps.tenbridge.datahub.mapper.PatientSearchMapper;
 import com.ps.tenbridge.datahub.mapper.PractitionerMapper;
 import com.ps.tenbridge.datahub.mapper.RaceMapper;
@@ -58,6 +61,7 @@ import com.veradigm.ps.tenbridge.client.api.GetRaceValuesApi;
 import com.veradigm.ps.tenbridge.client.api.GetReferralSourcesApi;
 import com.veradigm.ps.tenbridge.client.api.GetReferringProvidersApi;
 import com.veradigm.ps.tenbridge.client.api.SearchPatientApi;
+import com.veradigm.ps.tenbridge.client.models.Appointment;
 import com.veradigm.ps.tenbridge.client.models.AppointmentNotes;
 import com.veradigm.ps.tenbridge.client.models.AppointmentNotes200Response;
 import com.veradigm.ps.tenbridge.client.models.AppointmentNotesRequest;
@@ -75,6 +79,7 @@ import com.veradigm.ps.tenbridge.client.models.ChangeReason200Response;
 import com.veradigm.ps.tenbridge.client.models.Ethnicity200Response;
 import com.veradigm.ps.tenbridge.client.models.Gender200Response;
 import com.veradigm.ps.tenbridge.client.models.InsuranceCarrier;
+import com.veradigm.ps.tenbridge.client.models.Location;
 import com.veradigm.ps.tenbridge.client.models.NewAppointment;
 import com.veradigm.ps.tenbridge.client.models.Patient;
 import com.veradigm.ps.tenbridge.client.models.PatientAlert200Response;
@@ -85,6 +90,7 @@ import com.veradigm.ps.tenbridge.client.models.PatientRequest;
 import com.veradigm.ps.tenbridge.client.models.Patients200Response;
 import com.veradigm.ps.tenbridge.client.models.PayorGroups200Response;
 import com.veradigm.ps.tenbridge.client.models.PracticeLocation200Response;
+import com.veradigm.ps.tenbridge.client.models.Practitioner;
 import com.veradigm.ps.tenbridge.client.models.ProviderSlots200Response;
 import com.veradigm.ps.tenbridge.client.models.Providers200Response;
 import com.veradigm.ps.tenbridge.client.models.Race200Response;
@@ -330,6 +336,73 @@ public class TenBridgeService extends BaseService {
 
 	}
 
+	public List<AppointmentInfoDTO> getAppointment(String siteID, String customerName, String patient_id) {
+		try {
+			RequestMetaData meta = createRequestMetaData(siteID, customerName);
+			AppointmentSearchRequestData data = new AppointmentSearchRequestData();
+			data.setPatientId(patient_id);
+			AppointmentSearchRequest appointmentSearchRequest = new AppointmentSearchRequest();
+			appointmentSearchRequest.setMeta(meta);
+			appointmentSearchRequest.setData(data);
+			setToken();
+			List<ProviderDTO> allProviders = new ArrayList<ProviderDTO>();
+			allProviders = getProviders(siteID, customerName);
+
+			List<LocationDTO> allLocations = new ArrayList<LocationDTO>();
+			allLocations = getLocations(siteID, customerName);
+
+			Appointments200Response apiResponse = appointmentsApi.appointments(appointmentSearchRequest);
+			if (apiResponse == null || apiResponse.getAppointments() == null) {
+				logger.severe("Invalid data received: Appointments list is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			}
+			if (apiResponse.getAppointments().isEmpty()) {
+				logger.severe("API returned empty list");
+				throw new RuntimeException("Error occurred while retrieving Appointments: Empty Appointments list");
+			}
+
+			AppointmentInfoDTO appointmentInfoDTO = new AppointmentInfoDTO();
+			appointmentInfoDTO.setDoctorInfo(allProviders.get(0));
+			appointmentInfoDTO.setLocationInfo(allLocations.get(0));
+
+			List<AppointmentInfoDTO> response = PatientAppointmentsMapper.INSTANCE.mapAppointmentsWithAdditionalFields(
+					apiResponse, allProviders, // List of providers
+					allLocations // List of locations
+			);
+			return response;
+		} catch (Exception e) {
+			e.printStackTrace();
+			logger.severe("Error occurred while retrieving Appointments: " + e.getMessage());
+			throw new RuntimeException("Error occurred while retrieving Appointments: " + e.getMessage(), e);
+		}
+	}
+
+//	public Object getAppointment(String siteID, String customerName, String patient_id) {
+//		try {
+//			RequestMetaData meta = createRequestMetaData(siteID, customerName);
+//			AppointmentSearchRequestData data = new AppointmentSearchRequestData();
+//			data.setPatientId(patient_id);
+//			AppointmentSearchRequest appointmentSearchRequest = new AppointmentSearchRequest();
+//			appointmentSearchRequest.setMeta(meta);
+//			appointmentSearchRequest.setData(data);
+//			setToken();
+//			
+//			Appointments200Response apiResponse = appointmentsApi.appointments(appointmentSearchRequest);
+//			if (apiResponse == null || apiResponse.getAppointments() == null) {
+//				logger.severe("Invalid data received: Appointments list is null");
+//				throw new RuntimeException("Error occurred while building response: Invalid data received");
+//			}
+//			if (apiResponse.getAppointments().isEmpty()) {
+//				logger.severe("API returned empty list");
+//				throw new RuntimeException("Error occurred while retrieving Appointments: Empty Appointments list");
+//			}
+//			return apiResponse;
+//		} catch (Exception e) {
+//			logger.severe("Error occurred while retrieving Appointments: " + e.getMessage());
+//			throw new RuntimeException("Error occurred while retrieving Appointments: " + e.getMessage(), e);
+//		}
+//	}
+
 	public Object getSlots(String siteID, String customerName, String appointmentType, String startDate) {
 		try {
 			RequestMetaData meta = createRequestMetaData(siteID, customerName);
@@ -403,28 +476,29 @@ public class TenBridgeService extends BaseService {
 
 	}
 
-	public List<PatientAlertsDTO> getPatientAlerts(String siteID, String customerName, String patientProfileID) {
+	public patientAlerts getPatientAlerts(String siteID, String customerName, String patientProfileId) {
 		try {
-			PatientAlertsRequest patientAlertRequest = new PatientAlertsRequest();
 			RequestMetaData meta = createRequestMetaData(siteID, customerName);
+			PatientAlertsRequest patientAlertRequest = new PatientAlertsRequest();
 			patientAlertRequest.setMeta(meta);
 			PatientAlertsRequestBody body = new PatientAlertsRequestBody();
-			body.setPatientProfileId(patientProfileID);
+			body.setPatientProfileId(patientProfileId);
 			patientAlertRequest.setBody(body);
 			setToken();
 			PatientAlert200Response apiResponse = patientAlertsApi.patientAlert(patientAlertRequest);
+ 
 			if (apiResponse == null || apiResponse.getPatientAlerts() == null) {
-				logger.severe("Invalid data received: PatientAlerts list is null");
+				logger.severe("Invalid data received: Patient Alerts list is null");
 				throw new RuntimeException("Error occurred while building response: Invalid data received");
 			}
 			if (apiResponse.getPatientAlerts().isEmpty()) {
 				logger.severe("API returned empty list");
-				throw new RuntimeException("Error occurred while retrieving PatientAlerts: Empty PatientAlerts list");
+				throw new RuntimeException("Error occurred while retrieving PatientAlerts: Empty Patient Alerts list");
 			}
-			return buildResponse(apiResponse.getPatientAlerts(),
-					PatientAlertsMapper.INSTANCE::patientAlertsResponseToPatientAlertsDTO);
+			patientAlerts response = PatientAlertsMapper.INSTANCE.toTargetDTO(apiResponse.getPatientAlerts());
+			return response;
 		} catch (Exception e) {
-			logger.severe("Error occurred while retrieving ReferralSources: " + e.getMessage());
+			logger.severe("Error occurred while retrieving PatientAlerts: " + e.getMessage());
 			throw new RuntimeException("Error occurred while retrieving PatientAlerts: " + e.getMessage(), e);
 		}
 	}
@@ -515,31 +589,6 @@ public class TenBridgeService extends BaseService {
 		}
 	}
 
-	public Object getAppointment(String siteID, String customerName, String patient_id) {
-		try {
-			RequestMetaData meta = createRequestMetaData(siteID, customerName);
-			AppointmentSearchRequestData data = new AppointmentSearchRequestData();
-			data.setPatientId(patient_id);
-			AppointmentSearchRequest appointmentSearchRequest = new AppointmentSearchRequest();
-			appointmentSearchRequest.setMeta(meta);
-			appointmentSearchRequest.setData(data);
-			setToken();
-			Appointments200Response apiResponse = appointmentsApi.appointments(appointmentSearchRequest);
-			if (apiResponse == null || apiResponse.getAppointments().isEmpty()) {
-				logger.severe("Invalid data received: Appointments list is null");
-				throw new RuntimeException("Error occurred while building response: Invalid data received");
-			}
-			if (apiResponse.getAppointments().isEmpty()) {
-				logger.severe("API returned empty list");
-				throw new RuntimeException("Error occurred while retrieving Appointments: Empty Appointments list");
-			}
-			return apiResponse;
-		} catch (Exception e) {
-			logger.severe("Error occurred while retrieving Appointments: " + e.getMessage());
-			throw new RuntimeException("Error occurred while retrieving Appointments: " + e.getMessage(), e);
-		}
-	}
-
 	public Object createPatient(String siteID, String customerName, String first_name, String last_name,
 			String middle_name, String date_of_birth, String gender, String phone, String address_line_1,
 			String address_line_2, String state, String city, String zip, String email) {
@@ -553,12 +602,9 @@ public class TenBridgeService extends BaseService {
 				logger.severe("Invalid data received: Patient is null");
 				throw new RuntimeException("Error occurred while building response: Invalid data received");
 			}
-			if (apiResponse.getFirstName() == null) {
-				logger.severe("API returned empty list");
-				throw new RuntimeException("Error occurred while creating Patient: Empty Patient data");
-			}
 			return apiResponse;
 		} catch (Exception e) {
+			e.printStackTrace();
 			logger.severe("Error occurred while creating Patient: " + e.getMessage());
 			throw new RuntimeException("Error occurred while creating Patient: " + e.getMessage(), e);
 		}
@@ -698,3 +744,19 @@ public class TenBridgeService extends BaseService {
 	}
 
 }
+
+/*
+ * { "appointmentId": 3265, "scheduledDate": null, "startDateTime":
+ * "2022-04-25 10:15:00.000", "endDateTime": null, "doctorInfo": { "firstName":
+ * "Thomas", "lastName": "Livingston", "middle":"", "abbreviation": "LIVINGST",
+ * "degree": "NA", ------ "doctorId": 2, "careProviderId": 123, ------
+ * "listName": "Livingston, Thomas", ------ "categoryId": null ------ },
+ * "locationInfo": { "locationId": 1, "abbreviation": "NAS OFF",
+ * "locationAbbreviation": "NAS OFF ", "listName": "Nashua Office", ------
+ * "address1": "NA", "address2": "", "city": "NA", "state": "NA", "zip": "NA" },
+ * "appointmentTypeId": 1, "appointmentName": "ACUTE", "comments":
+ * "Sched by 69_0000_kumar_kiran_2022-04-23 /Acute Visit /",
+ * "chiefComplaintText": null, ------ "chiefComplaintCommentsInfo": null, ------
+ * "status": "S", "pastAppointment": true ------- }
+ * 
+ */

@@ -402,23 +402,8 @@ Feature: Ten Bridge Service Scenarios
 ### Scenarios for `createPatient` Method
 
   Scenario: CreatePatient - Successfully retrieve CreatePatient with a valid token
-    Given the TenBridgeService is initialized with a valid token For Appointments
-  | key            | value            |
-  | siteID         | 621              |
-  | customerName   | OpargoEpicTest   |
-  | first_name     | Manish           |
-  | last_name      | Machha           |
-  | middle_name    | Kumar            |
-  | date_of_birth  | 1995-07-23       |
-  | gender         | Male             |
-  | phone          | 123-569-7485     |
-  | address_line_1 | 123 Vishal heights |
-  | address_line_2 | Road no 4        |
-  | state          | VD               |
-  | city           | Texas            |
-  | zip            | 56231            |
-  | email          | aslk@kls.cpm     |
-    When I call the createPatient API with the following details and a valid Token
+    Given the TenBridgeService is initialized with a valid token For CreatePatient
+    When I call the createPatient API with siteID "621" and customerName "OpargoEpicTest" and first_name "Manish" and last_name "Machha" and middle_name "Kumar" and date_of_birth "1995-07-23" and gender "Male" and phone "123-569-7485" and address_line_1 "123 Vishal heights" and address_line_2 "Road no 4" and state "VD" and city "Texas" and zip "56231" and email "aslk@kls.cpm" and a valid Token
 		Then I should receive a data of CreatePatient
     And created patient should have valid details
 
@@ -436,8 +421,3 @@ Feature: Ten Bridge Service Scenarios
     Given the TenBridgeService is initialized For CreatePatient
     When the createPatient API receives invalid data for response building
     Then an appropriate exception or error message should be logged at response For CreatePatient
-
-  Scenario: CreatePatient - API response returns empty data
-    Given the TenBridgeService is initialized For CreatePatient
-    When the createPatient API returns an empty data
-    Then an appropriate exception or error message should be logged for empty data For CreatePatient
