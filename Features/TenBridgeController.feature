@@ -277,3 +277,38 @@ Feature: Ten Bridge Controller Scenarios
     When the client requests patientAlerts
     Then the response status should be 500
     And the response body should contain "Error occurred while retrieving PatientAlerts"
+    
+   Scenario: Successfully retrieve patientSearch
+    Given a request with valid attributes for patientSearch
+      | key           | value           |
+      | siteID        | 621             |
+      | customerName  | OpargoEpicTest  |
+      | first         | Theodore        |
+      | last          | Mychart         |
+      | dob           | 07-07-1948      |
+      | transactionId | hgmnb           |
+    When the client requests patientSearch
+    Then the response status should be 200
+    And the response body should contain "patients"
+
+   Scenario: Missing required attributes in the request for patientSearch
+    Given a request with missing attributes
+      | customerName |
+      | OpargoEpicTest |
+    When the client requests patientSearch
+    Then the response status should be 400
+    And the response body should contain "Invalid request: required fields missing"
+
+  Scenario: Error occurred during patientSearch call
+    Given a request with valid attributes for patientSearch
+      | key           | value           |
+      | siteID        | 621             |
+      | customerName  | OpargoEpicTest  |
+      | first         | Theodore        |
+      | last          | Mychart         |
+      | dob           | 07-07-1948      |
+      | transactionId | hgmnb           |
+    And the service throws an exception when calling patientSearch
+    When the client requests patientSearch
+    Then the response status should be 500
+    And the response body should contain "Error occurred while retrieving patients"

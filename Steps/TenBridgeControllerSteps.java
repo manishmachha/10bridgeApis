@@ -1,5 +1,9 @@
 package com.ps.tenbridge.integration.steps;
 
+import static org.mockito.Mockito.when;
+
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,11 +23,23 @@ import com.ps.tenbridge.datahub.dto.EthnicityDTO;
 import com.ps.tenbridge.datahub.dto.InsuranceDTO;
 import com.ps.tenbridge.datahub.dto.LocationDTO;
 import com.ps.tenbridge.datahub.dto.PatientAlertsDTO;
+import com.ps.tenbridge.datahub.dto.PatientInfoDTO;
+import com.ps.tenbridge.datahub.dto.PatientInsuranceInfo;
 import com.ps.tenbridge.datahub.dto.ProviderDTO;
 import com.ps.tenbridge.datahub.dto.RacesDTO;
 import com.ps.tenbridge.datahub.dto.ReferralSourcesDTO;
 import com.ps.tenbridge.datahub.dto.ReferringProviderDTO;
 import com.ps.tenbridge.datahub.dto.patientAlerts;
+import com.veradigm.ps.tenbridge.client.api.GetPracticeLocationsApi;
+import com.veradigm.ps.tenbridge.client.api.GetProvidersApi;
+import com.veradigm.ps.tenbridge.client.api.GetReferringProvidersApi;
+import com.veradigm.ps.tenbridge.client.models.InsurancePolicy;
+import com.veradigm.ps.tenbridge.client.models.Location;
+import com.veradigm.ps.tenbridge.client.models.Patient;
+import com.veradigm.ps.tenbridge.client.models.Patients200Response;
+import com.veradigm.ps.tenbridge.client.models.PracticeLocation200Response;
+import com.veradigm.ps.tenbridge.client.models.Practitioner;
+import com.veradigm.ps.tenbridge.client.models.Providers200Response;
 
 import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
@@ -204,6 +220,45 @@ public class TenBridgeControllerSteps {
 				.thenReturn(patientAlerts);
 	}
 
+	// Step to handle valid request for PatientSearch
+	@Given("a request with valid attributes for patientSearch")
+	public void aRequestWithValidAttributesForPatientSearch(Map<String, String> attributes) {
+		request.putAll(attributes);
+		/*
+		 * //sample response { "patient": "eTplvxRvcd-eT1nEI8BvQRQ3", "description":
+		 * "Contact", "category": "Isolation Flag", "preventBooking": "false" }
+		 */
+
+		// Mock service call for valid attributes
+		// Creating dummy instances for dependent objects
+		// Creating first PatientInfoDTO object using setters
+		PatientInfoDTO patient1 = new PatientInfoDTO();
+		patient1.setPatientProfileId("profile123");
+		patient1.setPatientId("patient456");
+		patient1.setFirstName("John");
+		patient1.setLastName("Doe");
+		patient1.setBirthDate("1990-01-01");
+		patient1.setPh("1234567890");
+		patient1.setPh2("0987654321");
+		patient1.setEmail("john.doe@example.com");
+		patient1.setListAddress("123 Main St, Apt 4B");
+		patient1.setAddr1("123 Main St");
+		patient1.setAddr2("Apt 4B");
+		patient1.setCity("New York");
+		patient1.setState("NY");
+		patient1.setZip("10001");
+		patient1.setSex("Male");
+		patient1.setSsn("123-45-6789");
+		patient1.setRace("Caucasian");
+		patient1.setEthnicity("Non-Hispanic");
+		patient1.setPrimaryCarePhysician("Dr. Emily");
+		patient1.setPatientAlerts("No known allergies");
+		patient1.setPreventBooking(false);
+		patient1.setComments("Regular check-ups required");
+		Mockito.when(tenBridgeService.getPatients("621", "OpargoEpicTest", "Theodore", "Mychart", "07-07-1948", "", ""))
+				.thenReturn(List.of(patient1));
+	}
+
 	// Step to handle request with missing attributes
 	@Given("a request with missing attributes")
 	public void aRequestWithMissingAttributesForRace(Map<String, String> attributes) {
@@ -281,6 +336,14 @@ public class TenBridgeControllerSteps {
 				.thenThrow(new RuntimeException("Simulated service error"));
 	}
 
+	// Step to simulate service throwing an exception when calling PatientSearch
+	@Given("the service throws an exception when calling patientSearch")
+	public void theServiceThrowsAnExceptionForPatientSearch() {
+		Mockito.when(tenBridgeService.getPatients(Mockito.anyString(), Mockito.anyString(), Mockito.anyString(),
+				Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+				.thenThrow(new RuntimeException("Simulated service error"));
+	}
+
 	// Step to request races
 	@When("the client requests races")
 	public void theClientRequestsRaces() {
@@ -333,14 +396,18 @@ public class TenBridgeControllerSteps {
 	@When("the client requests referralSources")
 	public void theClientRequestsReferralSource() {
 		response = controller.getReferralSources(request);
-		System.out.println(response);
 	}
 
 	// steps to request patientAlerts
 	@When("the client requests patientAlerts")
 	public void theClientRequestsPatientAlert() {
 		response = controller.getPatientAlerts(request);
-		System.out.println(response);
+	}
+
+	// steps to request PatientSearch
+	@When("the client requests patientSearch")
+	public void theClientRequestsPatientSearch() {
+		response = controller.getPatient(request);
 	}
 
 	// Step to check response status

@@ -374,7 +374,7 @@ Feature: Ten Bridge Service Scenarios
 ### Scenarios for `getPatient` Method
 
   Scenario: Patients - Successfully retrieve Patients with a valid token
-    Given the TenBridgeService is initialized with a valid token For Appointments
+    Given the TenBridgeService is initialized with a valid token For Patients
     When I call the getPatient API with siteID "621" and customerName "OpargoEpicTest" and first_name "Opargotest" and last_name "Test" and date_of_birth "11-01-1995" with valid Token
     Then I should receive a list of Patients
     And each patient should have valid details
