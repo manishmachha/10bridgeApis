@@ -638,6 +638,64 @@ paths:
           description: Unauthorized - Invalid or expired token.
         "500":
           description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/location:
+    post:
+      operationId: SingleLocation
+      tags:
+        - GetSingleLocation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SingleLocationRequest"
+      responses:
+        "200":
+          description: Get practice locations for a given practice and id.
+          content:
+            application/json:
+              schema:
+               type: object
+               properties:
+                locations:
+                 type: array
+                 items:
+                   $ref: "#/components/schemas/SingleLocationResponse"
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token.
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
+
+  /Opargo/dev/practitioner:
+    post:
+      operationId: SinglePractitioner
+      tags:
+        - GetSinglePractitioner
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SinglePractitionerRequest"
+      responses:
+        "200":
+          description: Get practice Practitioner for a given practice and id.
+          content:
+            application/json:
+              schema:
+               type: object
+               properties:
+                providers:
+                 type: array
+                 items:
+                   $ref: "#/components/schemas/SinglePractitionerResponse"
+
+        "400":
+          description: Bad Request - The request is invalid or missing required parameters.
+        "401":
+          description: Unauthorized - Invalid or expired token
+        "500":
+          description: Internal Server Error - An unexpected error occurred.
 
 security:
   - OAuth2: []
@@ -753,6 +811,8 @@ components:
           type: boolean
         is_practice_member:
           type: boolean
+        full_name:
+          type: string
         first_name:
           type: string
         last_name:
@@ -782,6 +842,10 @@ components:
           type: string
         gender:
           type: string
+        race:
+          type: string
+        ethnicity:
+          type: string
         phone:
           type: string
         address_line_1:
@@ -795,6 +859,8 @@ components:
         zip:
           type: string
         email:
+          type: string
+        ssn:
           type: string
       required:
         - first_name
@@ -813,7 +879,9 @@ components:
         - $ref: "#/components/schemas/NewPatient"
       type: object
       properties:
-        profile_id:
+        patientProfileID:
+          type: string
+        patient_id:
           type: string
         practitioner_id:
           type: integer
@@ -928,7 +996,7 @@ components:
       type: object
       properties:
         scheduled_id:
-          type: integer
+          type: string
           description: "appointment id "
         past_appointment:
           type: boolean
@@ -988,11 +1056,14 @@ components:
           type: string
           description: "busy | free | busy-unavailable | busy-tentative | entered-in-error"
         availability_date:
-          type: string
+          type: string
+          format: "date"
         start_time:
-          type: string
+          type: string
+          format: "date-time"
         end_time:
-          type: string
+          type: string
+          format: "date-time"
         over_booked:
           type: boolean
         comments:
@@ -1087,10 +1158,8 @@ components:
               type: string
             start_date:
               type: string
-              format: "date"
             end_date:
               type: string
-              format: "date"
           required:
             - patientProfileId
             - first_name
@@ -1111,8 +1180,10 @@ components:
               type: string
             start_date:
               type: string
+              format: "date"
             end_date:
               type: string
+              format: "date"
     PatientRequest:
       type: object
       properties:
@@ -1127,14 +1198,10 @@ components:
               type: string
             date_of_birth:
               type: string
-              format: "date"
-          oneOf: # any one field is required
-            - required:
-                - first_name
-            - required:
-                - last_name
-            - required:
-                - date_of_birth
+          required:
+            - last_name
+            - date_of_birth
+
     AppointmentNotesRequest:
       type: object
       properties:
@@ -1159,6 +1226,8 @@ components:
     NewAppointment:
       type: object
       properties:
+        requested_appointment_id:
+          type: string
         appointment_date:
           type: string
         appointment_duration:
@@ -1246,6 +1315,13 @@ components:
           $ref: "#/components/schemas/RequestMetaData"
         appointments:
           $ref: "#/components/schemas/NewAppointment"
+    CancelAppointmentResponse:
+      type: object
+      properties:
+        appointmentCancelStatus:
+          type: boolean
+        appointment_id:
+          type: string
     NewAppointmentRequest:
       type: object
       properties:
@@ -1267,6 +1343,32 @@ components:
               type: string
           required:
             - patientId
+    SingleLocationRequest:
+      type: object
+      properties:
+        meta:
+          $ref: "#/components/schemas/RequestMetaData"
+        data:
+          type: object
+          properties:
+            Location_id:
+              type: string
+          required:
+            - Location_id
+            - meta
+    SinglePractitionerRequest:
+      type: object
+      properties:
+        meta:
+          $ref: "#/components/schemas/RequestMetaData"
+        data:
+          type: object
+          properties:
+            Practitioner_id:
+              type: string
+            required:
+              - Location_id
+              - meta
     PatientInsuranceRequest:
       type: object
       properties:
@@ -1312,6 +1414,14 @@ components:
       required:
         - referral_source_id
         - description
+    SinglePractitionerResponse:
+      type: object
+      $ref: "#/components/schemas/Practitioner"         
+
+    SingleLocationResponse:
+      type: object
+      $ref: "#/components/schemas/Location"
+     
     ChangeReasonsResponse:
       type: object
       properties:

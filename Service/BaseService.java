@@ -17,6 +17,10 @@ import com.veradigm.ps.tenbridge.client.models.PatientRequestData;
 import com.veradigm.ps.tenbridge.client.models.RequestMetaData;
 import com.veradigm.ps.tenbridge.client.models.ScheduleRequest;
 import com.veradigm.ps.tenbridge.client.models.ScheduleRequestData;
+import com.veradigm.ps.tenbridge.client.models.SingleLocationRequest;
+import com.veradigm.ps.tenbridge.client.models.SingleLocationRequestData;
+import com.veradigm.ps.tenbridge.client.models.SinglePractitionerRequest;
+import com.veradigm.ps.tenbridge.client.models.SinglePractitionerRequestData;
 
 public abstract class BaseService {
 	protected RequestMetaData createRequestMetaData(String siteID, String customerName) {
@@ -40,6 +44,32 @@ public abstract class BaseService {
 		;
 		patientRequest.setData(patientRequestData);
 		return patientRequest;
+	}
+
+	protected SingleLocationRequest createSingleLocationRequest(String siteID, String customerName,
+			String locationId) {
+		RequestMetaData meta = new RequestMetaData();
+		meta.setSiteID(siteID);
+		meta.setCustomerName(customerName);
+		SingleLocationRequestData locationRequestData = new SingleLocationRequestData();
+		locationRequestData.setLocationId(locationId);
+		SingleLocationRequest locationRequest = new SingleLocationRequest();
+		locationRequest.setMeta(meta);
+		locationRequest.setData(locationRequestData);
+		return locationRequest;
+	}
+
+	protected SinglePractitionerRequest createSinglePractitionerRequest(String siteID, String customerName,
+			String practitionerId) {
+		RequestMetaData meta = new RequestMetaData();
+		meta.setSiteID(siteID);
+		meta.setCustomerName(customerName);
+		SinglePractitionerRequestData practitionerRequestData = new SinglePractitionerRequestData();
+		practitionerRequestData.setPractitionerId(practitionerId);
+		SinglePractitionerRequest practitionerRequest = new SinglePractitionerRequest();
+		practitionerRequest.setMeta(meta);
+		practitionerRequest.setData(practitionerRequestData);
+		return practitionerRequest;
 	}
 
 	protected AppointmentNotesRequest createAppointmentNotesRequest(String siteID, String customerName,
