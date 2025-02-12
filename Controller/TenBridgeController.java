@@ -1,6 +1,5 @@
 package com.ps.tenbridge.datahub.controller;
 
-import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +8,6 @@ import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,11 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ps.tenbridge.datahub.controllerImpl.TenBridgeService;
 import com.ps.tenbridge.datahub.utility.EncryptionHelper;
 import com.ps.tenbridge.datahub.utility.EncryptionKeyConstants;
-import com.veradigm.ps.tenbridge.client.models.AppointmentSearchRequest;
-import com.veradigm.ps.tenbridge.client.models.NewPatient;
-import com.veradigm.ps.tenbridge.client.models.PatientCreateRequest;
-import com.veradigm.ps.tenbridge.client.models.Practitioner;
-import com.veradigm.ps.tenbridge.client.models.RequestMetaData;
 
 @RestController
 @RequestMapping("/api")
@@ -33,7 +26,6 @@ public class TenBridgeController {
 
 	private final TenBridgeService tenBridgeService;
 
-	@Autowired
 	public TenBridgeController(TenBridgeService tenBridgeService) {
 		this.tenBridgeService = tenBridgeService;
 
@@ -258,9 +250,8 @@ public class TenBridgeController {
 	public ResponseEntity<Object> getSingleLocation(@RequestBody Map<String, String> request) {
 		try {
 			if (request.get("siteID") == null || request.get("siteID").isEmpty() || request.get("customerName") == null
-					|| request.get("customerName").isEmpty() 
-					|| request.get("Location_id") == null || request.get("Location_id").isEmpty()
-					) {
+					|| request.get("customerName").isEmpty() || request.get("Location_id") == null
+					|| request.get("Location_id").isEmpty()) {
 				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
 			}
 			Object location = tenBridgeService.getSingleLocation(request.get("siteID"), request.get("customerName"),
@@ -271,22 +262,22 @@ public class TenBridgeController {
 			return new ResponseEntity<>("Error occurred while retrieving location", HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
-	
+
 	@PostMapping("/single-practitioner")
 	public ResponseEntity<Object> getSinglePractitioner(@RequestBody Map<String, String> request) {
 		try {
 			if (request.get("siteID") == null || request.get("siteID").isEmpty() || request.get("customerName") == null
-					|| request.get("customerName").isEmpty() 
-					|| request.get("Practitioner_id") == null || request.get("Practitioner_id").isEmpty()
-					) {
+					|| request.get("customerName").isEmpty() || request.get("Practitioner_id") == null
+					|| request.get("Practitioner_id").isEmpty()) {
 				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
 			}
-			Object practitioner = tenBridgeService.getSinglePractitioner(request.get("siteID"), request.get("customerName"),
-					request.get("Practitioner_id"));
+			Object practitioner = tenBridgeService.getSinglePractitioner(request.get("siteID"),
+					request.get("customerName"), request.get("Practitioner_id"));
 			return new ResponseEntity<>(practitioner, HttpStatus.OK);
 		} catch (Exception e) {
 			logger.error("Error occurred while retrieving practitioner", e);
-			return new ResponseEntity<>("Error occurred while retrieving practitioner", HttpStatus.INTERNAL_SERVER_ERROR);
+			return new ResponseEntity<>("Error occurred while retrieving practitioner",
+					HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 

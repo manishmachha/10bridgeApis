@@ -1366,9 +1366,9 @@ components:
           properties:
             Practitioner_id:
               type: string
-            required:
-              - Location_id
-              - meta
+          required:
+            - Practitioner_id
+            - meta
     PatientInsuranceRequest:
       type: object
       properties:

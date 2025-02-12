@@ -1,12 +1,17 @@
 package com.ps.tenbridge.datahub.dto;
 
+import com.veradigm.ps.tenbridge.client.models.Location;
+import com.veradigm.ps.tenbridge.client.models.Practitioner;
+
 public class AppointmentInfoDTO {
 	private String appointmentId;
 	private String scheduledDate;
 	private String startDateTime;
 	private String endDateTime;
-	private ProviderDTO doctorInfo;
-	private LocationDTO locationInfo;
+	private String locationId;
+	private String practitionerId;
+	private Object locationInfo;
+	private Object doctorInfo;
 	private int appointmentTypeId;
 	private String appointmentName;
 	private String comments;
@@ -48,19 +53,19 @@ public class AppointmentInfoDTO {
 		this.endDateTime = endDateTime;
 	}
 
-	public ProviderDTO getDoctorInfo() {
+	public Object getDoctorInfo() {
 		return doctorInfo;
 	}
 
-	public void setDoctorInfo(ProviderDTO doctorInfo) {
+	public void setDoctorInfo(Object doctorInfo) {
 		this.doctorInfo = doctorInfo;
 	}
 
-	public LocationDTO getLocationInfo() {
+	public Object getLocationInfo() {
 		return locationInfo;
 	}
 
-	public void setLocationInfo(LocationDTO locationInfo) {
+	public void setLocationInfo(Object locationInfo) {
 		this.locationInfo = locationInfo;
 	}
 
@@ -118,5 +123,21 @@ public class AppointmentInfoDTO {
 
 	public void setPastAppointment(boolean pastAppointment) {
 		this.pastAppointment = pastAppointment;
+	}
+
+	public String getLocationId() {
+		return locationId;
+	}
+
+	public void setLocationId(String locationId) {
+		this.locationId = locationId;
+	}
+
+	public String getPractitionerId() {
+		return practitionerId;
+	}
+
+	public void setPractitionerId(String practitionerId) {
+		this.practitionerId = practitionerId;
 	}
 }

@@ -79,6 +79,7 @@ import com.veradigm.ps.tenbridge.client.models.ChangeReason200Response;
 import com.veradigm.ps.tenbridge.client.models.Ethnicity200Response;
 import com.veradigm.ps.tenbridge.client.models.Gender200Response;
 import com.veradigm.ps.tenbridge.client.models.InsuranceCarrier;
+import com.veradigm.ps.tenbridge.client.models.Location;
 import com.veradigm.ps.tenbridge.client.models.Patient;
 import com.veradigm.ps.tenbridge.client.models.PatientAlert200Response;
 import com.veradigm.ps.tenbridge.client.models.PatientAlertsRequest;
@@ -87,6 +88,7 @@ import com.veradigm.ps.tenbridge.client.models.PatientCreateRequest;
 import com.veradigm.ps.tenbridge.client.models.PatientRequest;
 import com.veradigm.ps.tenbridge.client.models.PayorGroups200Response;
 import com.veradigm.ps.tenbridge.client.models.PracticeLocation200Response;
+import com.veradigm.ps.tenbridge.client.models.Practitioner;
 import com.veradigm.ps.tenbridge.client.models.ProviderSlots200Response;
 import com.veradigm.ps.tenbridge.client.models.Providers200Response;
 import com.veradigm.ps.tenbridge.client.models.Race200Response;
@@ -341,11 +343,6 @@ public class TenBridgeService extends BaseService {
 			appointmentSearchRequest.setMeta(meta);
 			appointmentSearchRequest.setData(data);
 			setToken();
-			List<ProviderDTO> allProviders = new ArrayList<ProviderDTO>();
-			allProviders = getProviders(siteID, customerName);
-
-			List<LocationDTO> allLocations = new ArrayList<LocationDTO>();
-			allLocations = getLocations(siteID, customerName);
 
 			Appointments200Response apiResponse = appointmentsApi.appointments(appointmentSearchRequest);
 			if (apiResponse == null || apiResponse.getAppointments() == null) {
@@ -357,14 +354,23 @@ public class TenBridgeService extends BaseService {
 				throw new RuntimeException("Error occurred while retrieving Appointments: Empty Appointments list");
 			}
 
-			AppointmentInfoDTO appointmentInfoDTO = new AppointmentInfoDTO();
-			appointmentInfoDTO.setDoctorInfo(allProviders.get(0));
-			appointmentInfoDTO.setLocationInfo(allLocations.get(0));
+			Location location = new Location();
+			Practitioner practitioner = new Practitioner();
 
-			List<AppointmentInfoDTO> response = PatientAppointmentsMapper.INSTANCE.mapAppointmentsWithAdditionalFields(
-					apiResponse, allProviders, // List of providers
-					allLocations // List of locations
-			);
+			List<AppointmentInfoDTO> response = PatientAppointmentsMapper.INSTANCE
+					.mapAppointmentsWithAdditionalFields(apiResponse, location, practitioner);
+
+			response.forEach(appointment -> {
+				String LocationId = appointment.getLocationId();
+				String practitionerId = appointment.getPractitionerId();
+				System.out.println("LLLLLL: " + LocationId);
+				System.out.println("PPPPP: " + practitionerId);
+				Object singleLocation = getSingleLocation(siteID, customerName, LocationId);
+				appointment.setLocationInfo(singleLocation);
+				Object singlePractitioner = getSinglePractitioner(siteID, customerName, practitionerId);
+				appointment.setDoctorInfo(singlePractitioner);
+			});
+
 			return response;
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -691,19 +697,18 @@ public class TenBridgeService extends BaseService {
 	public Object getSingleLocation(String siteID, String customerName, String locationId) {
 		try {
 			setToken();
-			SingleLocationRequest singleLocationRequest = createSingleLocationRequest(siteID,
-					customerName, locationId);
-			SingleLocation200Response apiResponse = singleLocationApi
-					.singleLocation(singleLocationRequest);
-			System.out.println("XXXXXXXXXXXX: " + apiResponse);
-//			if (apiResponse == null || apiResponse.getSingleLocation().isEmpty()) {
-//				logger.severe("Invalid data received: location is null");
+			SingleLocationRequest singleLocationRequest = createSingleLocationRequest(siteID, customerName, locationId);
+			SingleLocation200Response apiResponse = singleLocationApi.singleLocation(singleLocationRequest);
+			if (apiResponse == null || apiResponse.getLocations().isEmpty()) {
+				logger.severe("Invalid data received: location is null");
+				return new Location();
 //				throw new RuntimeException("Error occurred while building response: Invalid data received");
-//			}
-//			if (apiResponse.getSingleLocation().isEmpty()) {
-//				logger.severe("API returned empty data");
+			}
+			if (apiResponse.getLocations().isEmpty()) {
+				logger.severe("API returned empty data");
+				return new Location();
 //				throw new RuntimeException("Error occurred while retrieving location: Empty location");
-//			}
+			}
 			return apiResponse;
 		} catch (Exception e) {
 			logger.severe("Error occurred while retrieving location: " + e.getMessage());
@@ -720,11 +725,13 @@ public class TenBridgeService extends BaseService {
 					.singlePractitioner(singlePractitionerRequest);
 			if (apiResponse == null || apiResponse.getProviders().isEmpty()) {
 				logger.severe("Invalid data received: Practitioner is null");
-				throw new RuntimeException("Error occurred while building response: Invalid data received");
+				return new Practitioner();
+//				throw new RuntimeException("Error occurred while building response: Invalid data received");
 			}
 			if (apiResponse.getProviders().isEmpty()) {
 				logger.severe("API returned empty data");
-				throw new RuntimeException("Error occurred while retrieving Practitioner: Empty Practitioner");
+				return new Practitioner();
+//				throw new RuntimeException("Error occurred while retrieving Practitioner: Empty Practitioner");
 			}
 			return apiResponse;
 		} catch (Exception e) {

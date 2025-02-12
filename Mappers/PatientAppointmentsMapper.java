@@ -7,17 +7,14 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 
+import com.ps.tenbridge.datahub.controllerImpl.TenBridgeService;
 import com.ps.tenbridge.datahub.dto.AppointmentInfoDTO;
-import com.ps.tenbridge.datahub.dto.LocationDTO;
-import com.ps.tenbridge.datahub.dto.PatientInfoDTO;
-import com.ps.tenbridge.datahub.dto.PatientInsuranceInfo;
-import com.ps.tenbridge.datahub.dto.ProviderDTO;
-import com.ps.tenbridge.datahub.dto.ReferringProviderDTO;
+import com.ps.tenbridge.datahub.dto.AppointmentLocationInfo;
+import com.ps.tenbridge.datahub.dto.AppointmentPractitionerInfo;
 import com.veradigm.ps.tenbridge.client.models.Appointment;
 import com.veradigm.ps.tenbridge.client.models.Appointments200Response;
-import com.veradigm.ps.tenbridge.client.models.InsurancePolicy;
-import com.veradigm.ps.tenbridge.client.models.Patient;
-import com.veradigm.ps.tenbridge.client.models.Patients200Response;
+import com.veradigm.ps.tenbridge.client.models.Location;
+import com.veradigm.ps.tenbridge.client.models.Practitioner;
 
 @Mapper
 public interface PatientAppointmentsMapper {
@@ -30,31 +27,48 @@ public interface PatientAppointmentsMapper {
 	@Mapping(source = "appointmentType", target = "appointmentName")
 	@Mapping(source = "notesOrComments", target = "comments")
 	@Mapping(source = "appointmentStatus", target = "status")
+	@Mapping(source = "scheduledLocationId", target = "locationId")
+	@Mapping(source = "scheduledProviderId", target = "practitionerId")
 	AppointmentInfoDTO mapAppointments(Appointment source);
 
+	@Mapping(source = "locationId", target = "locationId")
+	@Mapping(source = "abbreviation", target = "abbreviation")
+	@Mapping(source = "abbreviation", target = "locationAbbreviation")
+	@Mapping(source = "locationName", target = "listName")
+	@Mapping(source = "addressLine1", target = "address1")
+	@Mapping(source = "addressLine2", target = "address2")
+	@Mapping(source = "city", target = "city")
+	@Mapping(source = "state", target = "state")
+	@Mapping(source = "zip", target = "zip")
+	AppointmentLocationInfo mapLocation(Location source);
+
+	@Mapping(source = "firstName", target = "firstName")
+	@Mapping(source = "lastName", target = "lastName")
+	@Mapping(source = "middleName", target = "middle")
+	@Mapping(source = "abbreviation", target = "abbreviation")
+	@Mapping(source = "speciality", target = "degree")
+	@Mapping(source = "practitionerId", target = "doctorId")
+	@Mapping(source = "fullName", target = "listName")
+	AppointmentPractitionerInfo mapDoctor(Practitioner source);
+
 	default List<AppointmentInfoDTO> mapAppointmentsWithAdditionalFields(Appointments200Response apiResponse,
-			List<ProviderDTO> allProviders, List<LocationDTO> allLocations) {
-		// Extract the list of patients from the API response
+			Location location, Practitioner practitioner) {
+
+		// Extract the list of Appointments from the API response
 		List<Appointment> sourceAppointments = apiResponse.getAppointments();
 
-		// Map each SourcePatient to PatientInfoDTO
+		TenBridgeService tenBridgeService;
+
+		// Map each SourceAppointment to AppointmentInfoDTO
 		List<AppointmentInfoDTO> response = sourceAppointments.stream().map(sourceAppointment -> {
 			// Map basic fields
 			AppointmentInfoDTO appointmentInfo = mapAppointments(sourceAppointment);
 
+			appointmentInfo.setLocationInfo(location);
+			appointmentInfo.setLocationInfo(practitioner);
+
 			return appointmentInfo;
 		}).collect(Collectors.toList());
-
-		// Assign additional fields to each PatientInfoDTO
-		for (int i = 0; i < response.size(); i++) {
-			AppointmentInfoDTO appointment = response.get(i);
-			if (i < allProviders.size()) {
-				appointment.setDoctorInfo(allProviders.get(i));
-			}
-			if (i < allLocations.size()) {
-				appointment.setLocationInfo(allLocations.get(i));
-			}
-		}
 
 		return response;
 	}
