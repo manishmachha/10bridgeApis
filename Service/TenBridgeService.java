@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 
 import com.ps.tenbridge.datahub.config.OAuth2Config;
 import com.ps.tenbridge.datahub.dto.AppointmentInfoDTO;
+import com.ps.tenbridge.datahub.dto.AppointmentLocationInfo;
+import com.ps.tenbridge.datahub.dto.AppointmentPractitionerInfo;
 import com.ps.tenbridge.datahub.dto.CPTsDTO;
 import com.ps.tenbridge.datahub.dto.CancelReasonsDTO;
 import com.ps.tenbridge.datahub.dto.ChangeReasonsDTO;
@@ -701,12 +703,14 @@ public class TenBridgeService extends BaseService {
 			SingleLocation200Response apiResponse = singleLocationApi.singleLocation(singleLocationRequest);
 			if (apiResponse == null || apiResponse.getLocations().isEmpty()) {
 				logger.severe("Invalid data received: location is null");
-				return new Location();
+				AppointmentLocationInfo appointmentLocationInfo = new AppointmentLocationInfo();
+				appointmentLocationInfo.setLocationId(Integer.parseInt(locationId));
+				return appointmentLocationInfo;
 //				throw new RuntimeException("Error occurred while building response: Invalid data received");
 			}
 			if (apiResponse.getLocations().isEmpty()) {
 				logger.severe("API returned empty data");
-				return new Location();
+				return new AppointmentLocationInfo();
 //				throw new RuntimeException("Error occurred while retrieving location: Empty location");
 			}
 			return apiResponse;
@@ -725,7 +729,9 @@ public class TenBridgeService extends BaseService {
 					.singlePractitioner(singlePractitionerRequest);
 			if (apiResponse == null || apiResponse.getProviders().isEmpty()) {
 				logger.severe("Invalid data received: Practitioner is null");
-				return new Practitioner();
+				AppointmentPractitionerInfo appointmentPractitionerInfo = new AppointmentPractitionerInfo();
+				appointmentPractitionerInfo.setDoctorId(Integer.parseInt(practitionerId));
+				return appointmentPractitionerInfo;
 //				throw new RuntimeException("Error occurred while building response: Invalid data received");
 			}
 			if (apiResponse.getProviders().isEmpty()) {
