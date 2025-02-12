@@ -9,8 +9,8 @@ import org.mapstruct.factory.Mappers;
 
 import com.ps.tenbridge.datahub.controllerImpl.TenBridgeService;
 import com.ps.tenbridge.datahub.dto.AppointmentInfoDTO;
-import com.ps.tenbridge.datahub.dto.AppointmentLocationInfo;
-import com.ps.tenbridge.datahub.dto.AppointmentPractitionerInfo;
+import com.ps.tenbridge.datahub.dto.AppointmentLocationInfoDTO;
+import com.ps.tenbridge.datahub.dto.AppointmentPractitionerInfoDTO;
 import com.veradigm.ps.tenbridge.client.models.Appointment;
 import com.veradigm.ps.tenbridge.client.models.Appointments200Response;
 import com.veradigm.ps.tenbridge.client.models.Location;
@@ -40,7 +40,7 @@ public interface PatientAppointmentsMapper {
 	@Mapping(source = "city", target = "city")
 	@Mapping(source = "state", target = "state")
 	@Mapping(source = "zip", target = "zip")
-	AppointmentLocationInfo mapLocation(Location source);
+	AppointmentLocationInfoDTO mapLocation(Location source);
 
 	@Mapping(source = "firstName", target = "firstName")
 	@Mapping(source = "lastName", target = "lastName")
@@ -49,7 +49,7 @@ public interface PatientAppointmentsMapper {
 	@Mapping(source = "speciality", target = "degree")
 	@Mapping(source = "practitionerId", target = "doctorId")
 	@Mapping(source = "fullName", target = "listName")
-	AppointmentPractitionerInfo mapDoctor(Practitioner source);
+	AppointmentPractitionerInfoDTO mapDoctor(Practitioner source);
 
 	default List<AppointmentInfoDTO> mapAppointmentsWithAdditionalFields(Appointments200Response apiResponse,
 			Location location, Practitioner practitioner) {
@@ -57,15 +57,13 @@ public interface PatientAppointmentsMapper {
 		// Extract the list of Appointments from the API response
 		List<Appointment> sourceAppointments = apiResponse.getAppointments();
 
-		TenBridgeService tenBridgeService;
-
 		// Map each SourceAppointment to AppointmentInfoDTO
 		List<AppointmentInfoDTO> response = sourceAppointments.stream().map(sourceAppointment -> {
 			// Map basic fields
 			AppointmentInfoDTO appointmentInfo = mapAppointments(sourceAppointment);
 
 			appointmentInfo.setLocationInfo(location);
-			appointmentInfo.setLocationInfo(practitioner);
+			appointmentInfo.setDoctorInfo(practitioner);
 
 			return appointmentInfo;
 		}).collect(Collectors.toList());
