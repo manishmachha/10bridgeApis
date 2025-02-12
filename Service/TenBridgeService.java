@@ -10,8 +10,8 @@ import org.springframework.stereotype.Service;
 
 import com.ps.tenbridge.datahub.config.OAuth2Config;
 import com.ps.tenbridge.datahub.dto.AppointmentInfoDTO;
-import com.ps.tenbridge.datahub.dto.AppointmentLocationInfo;
-import com.ps.tenbridge.datahub.dto.AppointmentPractitionerInfo;
+import com.ps.tenbridge.datahub.dto.AppointmentLocationInfoDTO;
+import com.ps.tenbridge.datahub.dto.AppointmentPractitionerInfoDTO;
 import com.ps.tenbridge.datahub.dto.CPTsDTO;
 import com.ps.tenbridge.datahub.dto.CancelReasonsDTO;
 import com.ps.tenbridge.datahub.dto.ChangeReasonsDTO;
@@ -356,21 +356,34 @@ public class TenBridgeService extends BaseService {
 				throw new RuntimeException("Error occurred while retrieving Appointments: Empty Appointments list");
 			}
 
-			Location location = new Location();
-			Practitioner practitioner = new Practitioner();
+			Location location = new Location(); // Initialize location with all null values
+			Practitioner practitioner = new Practitioner(); // Initialize practitioner with all null values
 
 			List<AppointmentInfoDTO> response = PatientAppointmentsMapper.INSTANCE
 					.mapAppointmentsWithAdditionalFields(apiResponse, location, practitioner);
 
 			response.forEach(appointment -> {
-				String LocationId = appointment.getLocationId();
-				String practitionerId = appointment.getPractitionerId();
-				System.out.println("LLLLLL: " + LocationId);
-				System.out.println("PPPPP: " + practitionerId);
-				Object singleLocation = getSingleLocation(siteID, customerName, LocationId);
-				appointment.setLocationInfo(singleLocation);
-				Object singlePractitioner = getSinglePractitioner(siteID, customerName, practitionerId);
-				appointment.setDoctorInfo(singlePractitioner);
+
+				String LocationId = appointment.getLocationId(); // get locationID from appointment
+				if (LocationId != null || !LocationId.isEmpty()) {
+					// Fetch the Location details
+					Object singleLocation = getSingleLocation(siteID, customerName, LocationId);
+					if (singleLocation != null) {
+						// Setting LocationInfo in appointment
+						appointment.setLocationInfo(singleLocation);
+					}
+				}
+
+				String practitionerId = appointment.getPractitionerId(); // get practitionerId from appointment
+				if (practitionerId != null || !practitionerId.isEmpty()) {
+					// Fetch the practitioner details
+					Object singlePractitioner = getSinglePractitioner(siteID, customerName, practitionerId);
+					if (singlePractitioner != null) {
+						// Setting DoctorInfo in appointment
+						appointment.setDoctorInfo(singlePractitioner);
+					}
+				}
+
 			});
 
 			return response;
@@ -703,14 +716,16 @@ public class TenBridgeService extends BaseService {
 			SingleLocation200Response apiResponse = singleLocationApi.singleLocation(singleLocationRequest);
 			if (apiResponse == null || apiResponse.getLocations().isEmpty()) {
 				logger.severe("Invalid data received: location is null");
-				AppointmentLocationInfo appointmentLocationInfo = new AppointmentLocationInfo();
+				AppointmentLocationInfoDTO appointmentLocationInfo = new AppointmentLocationInfoDTO();
 				appointmentLocationInfo.setLocationId(Integer.parseInt(locationId));
 				return appointmentLocationInfo;
 //				throw new RuntimeException("Error occurred while building response: Invalid data received");
 			}
 			if (apiResponse.getLocations().isEmpty()) {
 				logger.severe("API returned empty data");
-				return new AppointmentLocationInfo();
+				AppointmentLocationInfoDTO appointmentLocationInfo = new AppointmentLocationInfoDTO();
+				appointmentLocationInfo.setLocationId(Integer.parseInt(locationId));
+				return appointmentLocationInfo;
 //				throw new RuntimeException("Error occurred while retrieving location: Empty location");
 			}
 			return apiResponse;
@@ -729,14 +744,16 @@ public class TenBridgeService extends BaseService {
 					.singlePractitioner(singlePractitionerRequest);
 			if (apiResponse == null || apiResponse.getProviders().isEmpty()) {
 				logger.severe("Invalid data received: Practitioner is null");
-				AppointmentPractitionerInfo appointmentPractitionerInfo = new AppointmentPractitionerInfo();
+				AppointmentPractitionerInfoDTO appointmentPractitionerInfo = new AppointmentPractitionerInfoDTO();
 				appointmentPractitionerInfo.setDoctorId(Integer.parseInt(practitionerId));
 				return appointmentPractitionerInfo;
 //				throw new RuntimeException("Error occurred while building response: Invalid data received");
 			}
 			if (apiResponse.getProviders().isEmpty()) {
 				logger.severe("API returned empty data");
-				return new Practitioner();
+				AppointmentPractitionerInfoDTO appointmentPractitionerInfo = new AppointmentPractitionerInfoDTO();
+				appointmentPractitionerInfo.setDoctorId(Integer.parseInt(practitionerId));
+				return appointmentPractitionerInfo;
 //				throw new RuntimeException("Error occurred while retrieving Practitioner: Empty Practitioner");
 			}
 			return apiResponse;
