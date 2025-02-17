@@ -16,8 +16,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ps.tenbridge.datahub.controllerImpl.TenBridgeService;
+import com.ps.tenbridge.datahub.dto.AppointmentInfoDTO;
 import com.ps.tenbridge.datahub.utility.EncryptionHelper;
 import com.ps.tenbridge.datahub.utility.EncryptionKeyConstants;
+import com.veradigm.ps.tenbridge.client.models.Appointment;
 
 @RestController
 @RequestMapping("/api")
@@ -124,11 +126,9 @@ public class TenBridgeController {
 			// Validate required fields in PatientRequest
 			boolean missingFields = Stream.of("siteID", "customerName", "last", "dob", "transactionId")
 					.anyMatch(field -> request.get(field) == null || request.get(field).isEmpty());
-
 			if (missingFields) {
 				return new ResponseEntity<>("Invalid request: required fields missing", HttpStatus.BAD_REQUEST);
 			}
-
 			// Extract values after validation
 			String siteID = request.get("siteID");
 			String customerName = request.get("customerName");
@@ -138,29 +138,45 @@ public class TenBridgeController {
 			String tid = request.get("transactionId");
 			String patientProfileId = request.get("patientProfileId");
 			String patientNumber = request.get("patientNumber");
+			String practiceId = request.get("practiceId");
 
 			if (request.get("patientProfileId") != null // existing patient
 					&& !request.get("patientProfileId").isEmpty()) {
 				patientProfileId = EncryptionHelper.decrypt(patientProfileId,
 						EncryptionKeyConstants.SSO_ENCRYPTION_KEY);
-
 				// patient Number
 			} else if (request.get("patientNumber") != null && !request.get("patientNumber").isEmpty()) {
 				patientNumber = request.get("patientNumber");
 
 			}
-
 			// Fetch patients
 			Object patients = tenBridgeService.getPatients(siteID, customerName, firstName, lastName, dateOfBirth,
-					patientProfileId, patientNumber);
+					patientProfileId, patientNumber, practiceId);
 			return createSuccessResponseforPatientSearch("patients", patients, tid);
-
 		} catch (Exception e) {
-			logger.error("Error occurred while retrieving patients", e);
+			e.printStackTrace();
 			return new ResponseEntity<Object>("Error occured while retreiving patients",
 					HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 
+	}
+
+	@PostMapping("/appointments")
+	public ResponseEntity<Object> getAppointment(@RequestBody Map<String, String> request) {
+		try {
+			if (request.get("siteID") == null || request.get("siteID").isEmpty() || request.get("customerName") == null
+					|| request.get("customerName").isEmpty() || request.get("patient_id") == null
+					|| request.get("patient_id").isEmpty()) {
+				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
+			}
+			Object appointment = tenBridgeService.getAppointment(request.get("siteID"), request.get("customerName"),
+					request.get("patient_id"));
+			return new ResponseEntity<>(appointment, HttpStatus.OK);
+		} catch (Exception e) {
+			logger.error("Error occurred while retrieving appointment", e);
+			return new ResponseEntity<>("Error occurred while retrieving appointment",
+					HttpStatus.INTERNAL_SERVER_ERROR);
+		}
 	}
 
 	@PostMapping("/slots")
@@ -224,24 +240,6 @@ public class TenBridgeController {
 		} catch (Exception e) {
 			logger.error("Error occurred while retrieving appointmentNotes", e);
 			return new ResponseEntity<>("Error occurred while retrieving appointmentNotes",
-					HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-	}
-
-	@PostMapping("/appointments")
-	public ResponseEntity<Object> getAppointment(@RequestBody Map<String, String> request) {
-		try {
-			if (request.get("siteID") == null || request.get("siteID").isEmpty() || request.get("customerName") == null
-					|| request.get("customerName").isEmpty() || request.get("patient_id") == null
-					|| request.get("patient_id").isEmpty()) {
-				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
-			}
-			Object appointment = tenBridgeService.getAppointment(request.get("siteID"), request.get("customerName"),
-					request.get("patient_id"));
-			return new ResponseEntity<>(appointment, HttpStatus.OK);
-		} catch (Exception e) {
-			logger.error("Error occurred while retrieving appointment", e);
-			return new ResponseEntity<>("Error occurred while retrieving appointment",
 					HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
@@ -311,6 +309,34 @@ public class TenBridgeController {
 		} catch (Exception e) {
 			logger.error("Error occurred while retrieving schedule", e);
 			return new ResponseEntity<>("Error occurred while retrieving schedule", HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	@PostMapping("/book-appointment")
+	public ResponseEntity<Object> bookAppointment(@RequestBody Map<String, String> request) {
+		try {
+			boolean missingFields = Stream.of("siteID", "customerName", "requestedAppointmentId", "patientIdentifier")
+					.anyMatch(field -> request.get(field) == null || request.get(field).isEmpty());
+
+			if (missingFields) {
+				return new ResponseEntity<>("Invalid request: required fields missing", HttpStatus.BAD_REQUEST);
+			}
+
+			List<AppointmentInfoDTO> appointment = tenBridgeService.bookAppointment(request.get("siteID"),
+					request.get("customerName"), request.get("appointmentDate"),
+					Integer.parseInt(request.get("appointmentDuration")), request.get("appointmentDateTime"),
+					request.get("appointmentType"), request.get("appointmentStatus"),
+					request.get("appointmentCreatedDate"), request.get("appointmentBookingDate"),
+					request.get("appointmentBookedBy"), request.get("coverageType"), request.get("visitType"),
+					request.get("appointmentStartTime"), request.get("appointmentEndTime"),
+					request.get("scheduledLocationId"), request.get("scheduledProviderId"),
+					request.get("scheduledDepartment"), request.get("referringProviderId"),
+					request.get("requestedAppointmentId"), request.get("patientIdentifier"),
+					request.get("notesOrComments"));
+			return new ResponseEntity<>(appointment, HttpStatus.OK);
+		} catch (Exception e) {
+			logger.error("Error occurred while creating appointment", e);
+			return new ResponseEntity<>("Error occurred while creating appointment", HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 

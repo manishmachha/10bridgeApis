@@ -10,8 +10,6 @@ import org.springframework.stereotype.Service;
 
 import com.ps.tenbridge.datahub.config.OAuth2Config;
 import com.ps.tenbridge.datahub.dto.AppointmentInfoDTO;
-import com.ps.tenbridge.datahub.dto.AppointmentLocationInfoDTO;
-import com.ps.tenbridge.datahub.dto.AppointmentPractitionerInfoDTO;
 import com.ps.tenbridge.datahub.dto.CPTsDTO;
 import com.ps.tenbridge.datahub.dto.CancelReasonsDTO;
 import com.ps.tenbridge.datahub.dto.ChangeReasonsDTO;
@@ -44,6 +42,7 @@ import com.ps.tenbridge.datahub.mapper.ReferringProviderMapper;
 import com.ps.tenbridge.datahub.services.authentication.TokenService;
 import com.ps.tenbridge.datahub.utility.BaseService;
 import com.veradigm.ps.tenbridge.client.ApiClient;
+import com.veradigm.ps.tenbridge.client.api.BookAppointmentApi;
 import com.veradigm.ps.tenbridge.client.api.CancelAppointmentApi;
 import com.veradigm.ps.tenbridge.client.api.CreatePatientApi;
 import com.veradigm.ps.tenbridge.client.api.GetAppointmentTypesApi;
@@ -65,6 +64,7 @@ import com.veradigm.ps.tenbridge.client.api.GetReferralSourcesApi;
 import com.veradigm.ps.tenbridge.client.api.GetReferringProvidersApi;
 import com.veradigm.ps.tenbridge.client.api.GetSingleLocationApi;
 import com.veradigm.ps.tenbridge.client.api.GetSinglePractitionerApi;
+import com.veradigm.ps.tenbridge.client.models.Appointment;
 import com.veradigm.ps.tenbridge.client.models.AppointmentNotes;
 import com.veradigm.ps.tenbridge.client.models.AppointmentNotes200Response;
 import com.veradigm.ps.tenbridge.client.models.AppointmentNotesRequest;
@@ -82,6 +82,7 @@ import com.veradigm.ps.tenbridge.client.models.Ethnicity200Response;
 import com.veradigm.ps.tenbridge.client.models.Gender200Response;
 import com.veradigm.ps.tenbridge.client.models.InsuranceCarrier;
 import com.veradigm.ps.tenbridge.client.models.Location;
+import com.veradigm.ps.tenbridge.client.models.NewAppointmentRequest;
 import com.veradigm.ps.tenbridge.client.models.Patient;
 import com.veradigm.ps.tenbridge.client.models.PatientAlert200Response;
 import com.veradigm.ps.tenbridge.client.models.PatientAlertsRequest;
@@ -156,6 +157,8 @@ public class TenBridgeService extends BaseService {
 	private GetSingleLocationApi singleLocationApi;
 	@Autowired
 	private GetSinglePractitionerApi singlePractitionerApi;
+	@Autowired
+	private BookAppointmentApi bookAppointmentApi;
 
 	private final OAuth2Config oauth;
 
@@ -166,7 +169,8 @@ public class TenBridgeService extends BaseService {
 			GetPatientAlertsApi patientAlertsApi, GetGenderValuesApi genderValuesApi, GetCptValuesApi cptsApi,
 			GetAvailableCancelReasonsApi cancelReasonsApi, GetAvailableChangeReasonsApi changeReasonsApi,
 			GetAppontmentsApi getAppontmentsApi, GetProviderSlotsApi providerSlotsApi, CreatePatientApi patientApi,
-			SearchPatientApi searchPatientApi) {
+			SearchPatientApi searchPatientApi, GetSinglePractitionerApi singlePractitionerApi,
+			GetSingleLocationApi singleLocationApi, BookAppointmentApi bookAppointmentApi) {
 		this.apiClient = apiClient;
 		this.tokenService = ts;
 		this.oauth = oauth;
@@ -186,6 +190,9 @@ public class TenBridgeService extends BaseService {
 		this.slotsApi = providerSlotsApi;
 		this.createPatientApi = patientApi;
 		this.searchPatient = searchPatientApi;
+		this.singlePractitionerApi = singlePractitionerApi;
+		this.singleLocationApi = singleLocationApi;
+		this.bookAppointmentApi = bookAppointmentApi;
 	}
 
 	public List<ProviderDTO> getProviders(String siteID, String customerName) {
@@ -301,7 +308,7 @@ public class TenBridgeService extends BaseService {
 	}
 
 	public List<PatientInfoDTO> getPatients(String siteID, String customerName, String first_name, String last_name,
-			String date_of_birth, String patientProfileId, String patientNumber) {
+			String date_of_birth, String patientProfileId, String patientNumber, String practiceId) {
 		try {
 			PatientRequest patientRequest = createPatientRequest(siteID, customerName, first_name, last_name,
 					date_of_birth);
@@ -317,18 +324,37 @@ public class TenBridgeService extends BaseService {
 				logger.severe("API returned empty list");
 				return new ArrayList<PatientInfoDTO>();
 			}
-			List<ProviderDTO> allProviders = getProviders(siteID, customerName);
-			List<ReferringProviderDTO> allReferringProviders = getReferringProviders(siteID, customerName);
-			List<LocationDTO> allLocations = getLocations(siteID, customerName);
+			ProviderDTO Provider = new ProviderDTO();
+			ReferringProviderDTO ReferringProvider = new ReferringProviderDTO();
 
 			PatientInfoDTO patientInfo = new PatientInfoDTO();
-			patientInfo.setPrefDoc(allProviders.get(0));
-			patientInfo.setPrefLoc(allLocations.get(0));
-			patientInfo.setRefDoc(allReferringProviders.get(0));
+
 			patientInfo.setPatientProfileId(patientProfileId);
 			patientInfo.setPatientId(patientNumber);
 			List<PatientInfoDTO> response = PatientSearchMapper.INSTANCE.mapPatientsWithAdditionalFields(apiResponse,
-					allProviders, allLocations, allReferringProviders);
+					Provider, ReferringProvider);
+			response.forEach(patientInfo1 -> {
+				String practitionerId = patientInfo1.getPractitionerId(); // Get practitionerId from patientInfo1
+
+				ProviderDTO provider = new ProviderDTO(); // Initialize provider with all null values
+
+				if (practitionerId != null && !practitionerId.isEmpty()) {
+					// Fetch the practitioner details
+					SinglePractitioner200Response singlePractitioner = getSinglePractitioner(siteID, customerName,
+							practitionerId);
+
+					if (singlePractitioner != null && singlePractitioner.getProviders() != null
+							&& !singlePractitioner.getProviders().isEmpty()) {
+
+						Practitioner providerDetails = singlePractitioner.getProviders().get(0);
+
+						// Use MapStruct to map Practitioner to ProviderDTO
+						provider = PractitionerMapper.INSTANCE.practitionerToProviderDTO(providerDetails);
+					}
+				}
+
+				patientInfo1.setPrefDoc(provider);
+			});
 			return response;
 		} catch (Exception e) {
 			logger.severe("Error occurred while retrieving Patients: " + e.getMessage());
@@ -356,34 +382,42 @@ public class TenBridgeService extends BaseService {
 				throw new RuntimeException("Error occurred while retrieving Appointments: Empty Appointments list");
 			}
 
-			Location location = new Location(); // Initialize location with all null values
-			Practitioner practitioner = new Practitioner(); // Initialize practitioner with all null values
-
 			List<AppointmentInfoDTO> response = PatientAppointmentsMapper.INSTANCE
-					.mapAppointmentsWithAdditionalFields(apiResponse, location, practitioner);
+					.mapAppointmentsWithAdditionalFields(apiResponse);
 
 			response.forEach(appointment -> {
-
 				String LocationId = appointment.getLocationId(); // get locationID from appointment
-				if (LocationId != null || !LocationId.isEmpty()) {
+				LocationDTO location = new LocationDTO(); // Initialize location with all null values
+				if (LocationId != null) {
 					// Fetch the Location details
-					Object singleLocation = getSingleLocation(siteID, customerName, LocationId);
-					if (singleLocation != null) {
-						// Setting LocationInfo in appointment
-						appointment.setLocationInfo(singleLocation);
+					SingleLocation200Response singleLocation = getSingleLocation(siteID, customerName, LocationId);
+					if (singleLocation != null && singleLocation.getLocations() != null
+							&& !singleLocation.getLocations().isEmpty()) {
+						Location locationDetails = singleLocation.getLocations().get(0);
+
+						// Use MapStruct to map Practitioner to ProviderDTO
+						location = LocationMapper.INSTANCE.LocationToLocationDTO(locationDetails);
 					}
 				}
 
 				String practitionerId = appointment.getPractitionerId(); // get practitionerId from appointment
-				if (practitionerId != null || !practitionerId.isEmpty()) {
+				ProviderDTO practitioner = new ProviderDTO(); // Initialize practitioner with all null values
+				if (practitionerId != null) {
 					// Fetch the practitioner details
-					Object singlePractitioner = getSinglePractitioner(siteID, customerName, practitionerId);
-					if (singlePractitioner != null) {
-						// Setting DoctorInfo in appointment
-						appointment.setDoctorInfo(singlePractitioner);
+					SinglePractitioner200Response singlePractitioner = getSinglePractitioner(siteID, customerName,
+							practitionerId);
+
+					if (singlePractitioner != null && singlePractitioner.getProviders() != null
+							&& !singlePractitioner.getProviders().isEmpty()) {
+
+						Practitioner providerDetails = singlePractitioner.getProviders().get(0);
+
+						// Use MapStruct to map Practitioner to ProviderDTO
+						practitioner = PractitionerMapper.INSTANCE.practitionerToProviderDTO(providerDetails);
 					}
 				}
-
+				appointment.setDoctorInfo(practitioner);
+				appointment.setLocationInfo(location);
 			});
 
 			return response;
@@ -709,24 +743,18 @@ public class TenBridgeService extends BaseService {
 		}
 	}
 
-	public Object getSingleLocation(String siteID, String customerName, String locationId) {
+	public SingleLocation200Response getSingleLocation(String siteID, String customerName, String locationId) {
 		try {
 			setToken();
 			SingleLocationRequest singleLocationRequest = createSingleLocationRequest(siteID, customerName, locationId);
 			SingleLocation200Response apiResponse = singleLocationApi.singleLocation(singleLocationRequest);
-			if (apiResponse == null || apiResponse.getLocations().isEmpty()) {
-				logger.severe("Invalid data received: location is null");
-				AppointmentLocationInfoDTO appointmentLocationInfo = new AppointmentLocationInfoDTO();
-				appointmentLocationInfo.setLocationId(Integer.parseInt(locationId));
-				return appointmentLocationInfo;
-//				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			if (apiResponse == null || apiResponse.getLocations() == null) {
+				logger.severe("Invalid data received: Location is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
 			}
 			if (apiResponse.getLocations().isEmpty()) {
 				logger.severe("API returned empty data");
-				AppointmentLocationInfoDTO appointmentLocationInfo = new AppointmentLocationInfoDTO();
-				appointmentLocationInfo.setLocationId(Integer.parseInt(locationId));
-				return appointmentLocationInfo;
-//				throw new RuntimeException("Error occurred while retrieving location: Empty location");
+				return new SingleLocation200Response();
 			}
 			return apiResponse;
 		} catch (Exception e) {
@@ -735,7 +763,8 @@ public class TenBridgeService extends BaseService {
 		}
 	}
 
-	public Object getSinglePractitioner(String siteID, String customerName, String practitionerId) {
+	public SinglePractitioner200Response getSinglePractitioner(String siteID, String customerName,
+			String practitionerId) {
 		try {
 			setToken();
 			SinglePractitionerRequest singlePractitionerRequest = createSinglePractitionerRequest(siteID, customerName,
@@ -744,22 +773,91 @@ public class TenBridgeService extends BaseService {
 					.singlePractitioner(singlePractitionerRequest);
 			if (apiResponse == null || apiResponse.getProviders().isEmpty()) {
 				logger.severe("Invalid data received: Practitioner is null");
-				AppointmentPractitionerInfoDTO appointmentPractitionerInfo = new AppointmentPractitionerInfoDTO();
-				appointmentPractitionerInfo.setDoctorId(Integer.parseInt(practitionerId));
-				return appointmentPractitionerInfo;
+				return new SinglePractitioner200Response();
 //				throw new RuntimeException("Error occurred while building response: Invalid data received");
 			}
 			if (apiResponse.getProviders().isEmpty()) {
 				logger.severe("API returned empty data");
-				AppointmentPractitionerInfoDTO appointmentPractitionerInfo = new AppointmentPractitionerInfoDTO();
-				appointmentPractitionerInfo.setDoctorId(Integer.parseInt(practitionerId));
-				return appointmentPractitionerInfo;
+				return new SinglePractitioner200Response();
 //				throw new RuntimeException("Error occurred while retrieving Practitioner: Empty Practitioner");
 			}
 			return apiResponse;
 		} catch (Exception e) {
 			logger.severe("Error occurred while retrieving Practitioner: " + e.getMessage());
 			throw new RuntimeException("Error occurred while retrieving Practitioner: " + e.getMessage(), e);
+		}
+	}
+
+	public List<AppointmentInfoDTO> bookAppointment(String siteID, String customerName, String appointmentDate,
+			int appointmentDuration, String appointmentDateTime, String appointmentType, String appointmentStatus,
+			String appointmentCreatedDate, String appointmentBookingDate, String appointmentBookedBy,
+			String coverageType, String visitType, String appointmentStartTime, String appointmentEndTime,
+			String scheduledLocationId, String scheduledProviderId, String scheduledDepartment,
+			String referringProviderId, String requestedAppointmentId, String patientIdentifier,
+			String notesOrComments) {
+		try {
+			setToken();
+			NewAppointmentRequest bookAppointmentRequest = createBookAppointmentRequest(siteID, customerName,
+					appointmentDate, appointmentDuration, appointmentDateTime, appointmentType, appointmentStatus,
+					appointmentCreatedDate, appointmentBookingDate, appointmentBookedBy, coverageType, visitType,
+					appointmentStartTime, appointmentEndTime, scheduledLocationId, scheduledProviderId,
+					scheduledDepartment, referringProviderId, requestedAppointmentId, patientIdentifier,
+					notesOrComments);
+
+			Appointment apiResponse = bookAppointmentApi.bookAppointment(bookAppointmentRequest);
+			Appointments200Response apiResponse2 = new Appointments200Response();
+			apiResponse2.setAppointments(List.of(apiResponse));
+			if (apiResponse == null || apiResponse.getAppointmentId() == null) {
+				logger.severe("Invalid data received: Appointments list is null");
+				throw new RuntimeException("Error occurred while building response: Invalid data received");
+			}
+			if (apiResponse.getAppointmentId().isEmpty()) {
+				logger.severe("API returned empty list");
+				throw new RuntimeException("Error occurred while retrieving Appointments: Empty Appointments list");
+			}
+
+			List<AppointmentInfoDTO> response = PatientAppointmentsMapper.INSTANCE
+					.mapAppointmentsWithAdditionalFields(apiResponse2);
+
+			response.forEach(appointment -> {
+				String LocationId = appointment.getLocationId(); // get locationID from appointment
+				LocationDTO location = new LocationDTO(); // Initialize location with all null values
+				if (LocationId != null) {
+					// Fetch the Location details
+					SingleLocation200Response singleLocation = getSingleLocation(siteID, customerName, LocationId);
+					if (singleLocation != null && singleLocation.getLocations() != null
+							&& !singleLocation.getLocations().isEmpty()) {
+						Location locationDetails = singleLocation.getLocations().get(0);
+
+						// Use MapStruct to map Practitioner to ProviderDTO
+						location = LocationMapper.INSTANCE.LocationToLocationDTO(locationDetails);
+					}
+				}
+
+				String practitionerId = appointment.getPractitionerId(); // get practitionerId from appointment
+				ProviderDTO practitioner = new ProviderDTO(); // Initialize practitioner with all null values
+				if (practitionerId != null) {
+					// Fetch the practitioner details
+					SinglePractitioner200Response singlePractitioner = getSinglePractitioner(siteID, customerName,
+							practitionerId);
+
+					if (singlePractitioner != null && singlePractitioner.getProviders() != null
+							&& !singlePractitioner.getProviders().isEmpty()) {
+
+						Practitioner providerDetails = singlePractitioner.getProviders().get(0);
+
+						// Use MapStruct to map Practitioner to ProviderDTO
+						practitioner = PractitionerMapper.INSTANCE.practitionerToProviderDTO(providerDetails);
+					}
+				}
+				appointment.setDoctorInfo(practitioner);
+				appointment.setLocationInfo(location);
+			});
+
+			return response;
+		} catch (Exception e) {
+			logger.severe("Error occurred while creating Appointment: " + e.getMessage());
+			throw new RuntimeException("Error occurred while creating Appointment: " + e.getMessage(), e);
 		}
 	}
 

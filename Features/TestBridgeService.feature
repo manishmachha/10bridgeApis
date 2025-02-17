@@ -375,7 +375,7 @@ Feature: Ten Bridge Service Scenarios
 
   Scenario: Patients - Successfully retrieve Patients with a valid token
     Given the TenBridgeService is initialized with a valid token For Patients
-    When I call the getPatient API with siteID "621" and customerName "OpargoEpicTest" and first_name "Opargotest" and last_name "Test" and date_of_birth "11-01-1995" with valid Token
+    When I call the getPatient API with siteID "621" and customerName "OpargoEpicTest" and first_name "Theodore" and last_name "Mychart" and date_of_birth "07-07-1948" with valid Token
     Then I should receive a list of Patients
     And each patient should have valid details
 
@@ -421,3 +421,31 @@ Feature: Ten Bridge Service Scenarios
     Given the TenBridgeService is initialized For CreatePatient
     When the createPatient API receives invalid data for response building
     Then an appropriate exception or error message should be logged at response For CreatePatient
+    
+### Scenarios for `BookAppointment` Method
+
+  Scenario: BookAppointment - Successfully retrieve BookAppointment with a valid token
+    Given the TenBridgeService is initialized with a valid token For BookAppointment
+    When I call the BookAppointment API with siteID "621" and customerName "OpargoEpicTest" and requested_appointment_id "ed51N59JQBCRP-YLrjsCqP0rIgDW8vunR.klWYS2qPsZDEZo5PaJg9Uu4Rm8wK7U43" and patient_identifier "ezj0mOD3Vp5fkCsJ5wtVHBw3" and a valid Token
+		Then I should receive a data of BookAppointment
+    And booked appointment should have valid details
+
+  Scenario: BookAppointment - API call fails with a 400 or 500 response
+    Given the TenBridgeService is initialized For BookAppointment
+    When the BookAppointment API is called and the API returns an error status
+    Then an appropriate exception or error message should be logged For BookAppointment
+
+  Scenario: BookAppointment - Invalid token causes failure
+    Given the TenBridgeService is initialized with an invalid token For BookAppointment
+    When I call the BookAppointment API with invalid Token
+    Then the API call should fail with an unauthorized error For BookAppointment
+
+  Scenario: BookAppointment - Build response fails
+    Given the TenBridgeService is initialized For BookAppointment
+    When the BookAppointment API receives invalid data for response building
+    Then an appropriate exception or error message should be logged at response For BookAppointment
+    
+    Scenario: BookAppointment - API response returns empty list
+    Given the TenBridgeService is initialized For BookAppointment
+    When the BookAppointment API returns an empty list
+    Then an appropriate exception or error message should be logged for empty list For BookAppointment
