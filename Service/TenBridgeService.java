@@ -1,12 +1,22 @@
 package com.ps.tenbridge.datahub.controllerImpl;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientResponseException;
 
 import com.ps.tenbridge.datahub.config.OAuth2Config;
 import com.ps.tenbridge.datahub.dto.AppointmentInfoDTO;
@@ -41,6 +51,8 @@ import com.ps.tenbridge.datahub.mapper.ReferralSourcesMapper;
 import com.ps.tenbridge.datahub.mapper.ReferringProviderMapper;
 import com.ps.tenbridge.datahub.services.authentication.TokenService;
 import com.ps.tenbridge.datahub.utility.BaseService;
+import com.ps.tenbridge.datahub.utility.SingleLocationsUtil;
+import com.ps.tenbridge.datahub.utility.SinglePractitionersUtil;
 import com.veradigm.ps.tenbridge.client.ApiClient;
 import com.veradigm.ps.tenbridge.client.api.BookAppointmentApi;
 import com.veradigm.ps.tenbridge.client.api.CancelAppointmentApi;
@@ -107,6 +119,7 @@ import com.veradigm.ps.tenbridge.client.models.SlotRequest;
 import com.veradigm.ps.tenbridge.client.models.SlotRequestData;
 
 @Service
+@EnableAsync
 public class TenBridgeService extends BaseService {
 
 	private static final Logger logger = Logger.getLogger(TenBridgeService.class.getName());
@@ -159,6 +172,10 @@ public class TenBridgeService extends BaseService {
 	private GetSinglePractitionerApi singlePractitionerApi;
 	@Autowired
 	private BookAppointmentApi bookAppointmentApi;
+	@Autowired
+	private SingleLocationsUtil singleLocationBulkApi;
+	@Autowired
+	private SinglePractitionersUtil singlePractitionerBulkApi;
 
 	private final OAuth2Config oauth;
 
@@ -307,6 +324,127 @@ public class TenBridgeService extends BaseService {
 		}
 	}
 
+//	public List<PatientInfoDTO> getPatients(String siteID, String customerName, String first_name, String last_name,
+//			String date_of_birth, String patientProfileId, String patientNumber, String practiceId) {
+//		try {
+//			PatientRequest patientRequest = createPatientRequest(siteID, customerName, first_name, last_name,
+//					date_of_birth);
+//			setToken();
+//
+//			Patients200Response apiResponse = searchPatient.patients(patientRequest);
+//
+//			if (apiResponse == null || apiResponse.getPatients() == null) {
+//				logger.severe("Invalid data received: Patients list is null");
+//				throw new RuntimeException("Error occurred while building response: Invalid data received");
+//			}
+//			if (apiResponse.getPatients().isEmpty()) {
+//				logger.severe("API returned empty list");
+//				return new ArrayList<PatientInfoDTO>();
+//			}
+//			ProviderDTO Provider = new ProviderDTO();
+//			ReferringProviderDTO ReferringProvider = new ReferringProviderDTO();
+//
+//			PatientInfoDTO patientInfo = new PatientInfoDTO();
+//
+//			patientInfo.setPatientProfileId(patientProfileId);
+//			patientInfo.setPatientId(patientNumber);
+//			List<PatientInfoDTO> response = PatientSearchMapper.INSTANCE.mapPatientsWithAdditionalFields(apiResponse,
+//					Provider, ReferringProvider);
+//			response.forEach(patientInfo1 -> {
+//				String practitionerId = patientInfo1.getPractitionerId(); // Get practitionerId from patientInfo1
+//
+//				ProviderDTO provider = new ProviderDTO(); // Initialize provider with all null values
+//
+//				if (practitionerId != null && !practitionerId.isEmpty()) {
+//					// Fetch the practitioner details
+//					SinglePractitioner200Response singlePractitioner = getSinglePractitioner(siteID, customerName,
+//							practitionerId);
+//
+//					if (singlePractitioner != null && singlePractitioner.getProviders() != null
+//							&& !singlePractitioner.getProviders().isEmpty()) {
+//
+//						Practitioner providerDetails = singlePractitioner.getProviders().get(0);
+//
+//						// Use MapStruct to map Practitioner to ProviderDTO
+//						provider = PractitionerMapper.INSTANCE.practitionerToProviderDTO(providerDetails);
+//					}
+//				}
+//
+//				patientInfo1.setPrefDoc(provider);
+//			});
+//			return response;
+//		} catch (Exception e) {
+//			logger.severe("Error occurred while retrieving Patients: " + e.getMessage());
+//			throw new RuntimeException("Error occurred while retrieving Patients: " + e.getMessage(), e);
+//		}
+//	}
+
+//	public List<AppointmentInfoDTO> getAppointment(String siteID, String customerName, String patient_id) {
+//		try {
+//			RequestMetaData meta = createRequestMetaData(siteID, customerName);
+//			AppointmentSearchRequestData data = new AppointmentSearchRequestData();
+//			data.setPatientId(patient_id);
+//			AppointmentSearchRequest appointmentSearchRequest = new AppointmentSearchRequest();
+//			appointmentSearchRequest.setMeta(meta);
+//			appointmentSearchRequest.setData(data);
+//			setToken();
+//
+//			Appointments200Response apiResponse = appointmentsApi.appointments(appointmentSearchRequest);
+//			if (apiResponse == null || apiResponse.getAppointments() == null) {
+//				logger.severe("Invalid data received: Appointments list is null");
+//				throw new RuntimeException("Error occurred while building response: Invalid data received");
+//			}
+//			if (apiResponse.getAppointments().isEmpty()) {
+//				logger.severe("API returned empty list");
+//				throw new RuntimeException("Error occurred while retrieving Appointments: Empty Appointments list");
+//			}
+//
+//			List<AppointmentInfoDTO> response = PatientAppointmentsMapper.INSTANCE
+//					.mapAppointmentsWithAdditionalFields(apiResponse);
+//
+//			response.forEach(appointment -> {
+//				String LocationId = appointment.getLocationId(); // get locationID from appointment
+//				LocationDTO location = new LocationDTO(); // Initialize location with all null values
+//				if (LocationId != null) {
+//					// Fetch the Location details
+//					SingleLocation200Response singleLocation = getSingleLocation(siteID, customerName, LocationId);
+//					if (singleLocation != null && singleLocation.getLocations() != null
+//							&& !singleLocation.getLocations().isEmpty()) {
+//						Location locationDetails = singleLocation.getLocations().get(0);
+//
+//						// Use MapStruct to map Practitioner to ProviderDTO
+//						location = LocationMapper.INSTANCE.LocationToLocationDTO(locationDetails);
+//					}
+//				}
+//
+//				String practitionerId = appointment.getPractitionerId(); // get practitionerId from appointment
+//				ProviderDTO practitioner = new ProviderDTO(); // Initialize practitioner with all null values
+//				if (practitionerId != null) {
+//					// Fetch the practitioner details
+//					SinglePractitioner200Response singlePractitioner = getSinglePractitioner(siteID, customerName,
+//							practitionerId);
+//
+//					if (singlePractitioner != null && singlePractitioner.getProviders() != null
+//							&& !singlePractitioner.getProviders().isEmpty()) {
+//
+//						Practitioner providerDetails = singlePractitioner.getProviders().get(0);
+//
+//						// Use MapStruct to map Practitioner to ProviderDTO
+//						practitioner = PractitionerMapper.INSTANCE.practitionerToProviderDTO(providerDetails);
+//					}
+//				}
+//				appointment.setDoctorInfo(practitioner);
+//				appointment.setLocationInfo(location);
+//			});
+//
+//			return response;
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//			logger.severe("Error occurred while retrieving Appointments: " + e.getMessage());
+//			throw new RuntimeException("Error occurred while retrieving Appointments: " + e.getMessage(), e);
+//		}
+//	}
+
 	public List<PatientInfoDTO> getPatients(String siteID, String customerName, String first_name, String last_name,
 			String date_of_birth, String patientProfileId, String patientNumber, String practiceId) {
 		try {
@@ -322,39 +460,23 @@ public class TenBridgeService extends BaseService {
 			}
 			if (apiResponse.getPatients().isEmpty()) {
 				logger.severe("API returned empty list");
-				return new ArrayList<PatientInfoDTO>();
+				throw new RuntimeException("Error occurred while retrieving Patients: Empty Patients list");
 			}
-			ProviderDTO Provider = new ProviderDTO();
-			ReferringProviderDTO ReferringProvider = new ReferringProviderDTO();
 
-			PatientInfoDTO patientInfo = new PatientInfoDTO();
-
-			patientInfo.setPatientProfileId(patientProfileId);
-			patientInfo.setPatientId(patientNumber);
 			List<PatientInfoDTO> response = PatientSearchMapper.INSTANCE.mapPatientsWithAdditionalFields(apiResponse,
-					Provider, ReferringProvider);
-			response.forEach(patientInfo1 -> {
-				String practitionerId = patientInfo1.getPractitionerId(); // Get practitionerId from patientInfo1
+					new ProviderDTO(), new ReferringProviderDTO());
 
-				ProviderDTO provider = new ProviderDTO(); // Initialize provider with all null values
+			Set<String> practitionerIds = response.stream().map(PatientInfoDTO::getPractitionerId)
+					.filter(Objects::nonNull).collect(Collectors.toSet());
 
-				if (practitionerId != null && !practitionerId.isEmpty()) {
-					// Fetch the practitioner details
-					SinglePractitioner200Response singlePractitioner = getSinglePractitioner(siteID, customerName,
-							practitionerId);
+			// Map<String, ProviderDTO> practitionerMap = getPractitionersInBulk(siteID,
+			// customerName, practitionerIds).get();
+			Map<String, ProviderDTO> practitionerMap = getPractitionersInBulk(siteID, customerName, practitionerIds);
 
-					if (singlePractitioner != null && singlePractitioner.getProviders() != null
-							&& !singlePractitioner.getProviders().isEmpty()) {
-
-						Practitioner providerDetails = singlePractitioner.getProviders().get(0);
-
-						// Use MapStruct to map Practitioner to ProviderDTO
-						provider = PractitionerMapper.INSTANCE.practitionerToProviderDTO(providerDetails);
-					}
-				}
-
-				patientInfo1.setPrefDoc(provider);
+			response.forEach(patientInfo -> {
+				patientInfo.setPrefDoc(practitionerMap.get(patientInfo.getPractitionerId()));
 			});
+
 			return response;
 		} catch (Exception e) {
 			logger.severe("Error occurred while retrieving Patients: " + e.getMessage());
@@ -382,51 +504,229 @@ public class TenBridgeService extends BaseService {
 				throw new RuntimeException("Error occurred while retrieving Appointments: Empty Appointments list");
 			}
 
+			// Map basic fields using MapStruct
 			List<AppointmentInfoDTO> response = PatientAppointmentsMapper.INSTANCE
 					.mapAppointmentsWithAdditionalFields(apiResponse);
 
+			// Collect unique LocationIds and PractitionerIds
+			Set<String> locationIds = response.stream().map(AppointmentInfoDTO::getLocationId).filter(Objects::nonNull)
+					.collect(Collectors.toSet());
+
+			Set<String> practitionerIds = response.stream().map(AppointmentInfoDTO::getPractitionerId)
+					.filter(Objects::nonNull).collect(Collectors.toSet());
+
+			// Fetch all locations and practitioners in bulk
+
+			// Map<String, LocationDTO> locationMap = getLocationsInBulk(siteID,
+			// customerName, locationIds).get();
+			Map<String, LocationDTO> locationMap = getLocationsInBulk(siteID, customerName, locationIds);
+
+			// Map<String, ProviderDTO> practitionerMap = getPractitionersInBulk(siteID,
+			// customerName, practitionerIds).get();
+			Map<String, ProviderDTO> practitionerMap = getPractitionersInBulk(siteID, customerName, practitionerIds);
+
+			// Assign fetched data to appointments
 			response.forEach(appointment -> {
-				String LocationId = appointment.getLocationId(); // get locationID from appointment
-				LocationDTO location = new LocationDTO(); // Initialize location with all null values
-				if (LocationId != null) {
-					// Fetch the Location details
-					SingleLocation200Response singleLocation = getSingleLocation(siteID, customerName, LocationId);
-					if (singleLocation != null && singleLocation.getLocations() != null
-							&& !singleLocation.getLocations().isEmpty()) {
-						Location locationDetails = singleLocation.getLocations().get(0);
-
-						// Use MapStruct to map Practitioner to ProviderDTO
-						location = LocationMapper.INSTANCE.LocationToLocationDTO(locationDetails);
-					}
+				if (locationMap.containsKey(appointment.getLocationId())) {
+					appointment.setLocationInfo(locationMap.get(appointment.getLocationId()));
+				} else {
+					appointment.setLocationInfo(new LocationDTO());
 				}
-
-				String practitionerId = appointment.getPractitionerId(); // get practitionerId from appointment
-				ProviderDTO practitioner = new ProviderDTO(); // Initialize practitioner with all null values
-				if (practitionerId != null) {
-					// Fetch the practitioner details
-					SinglePractitioner200Response singlePractitioner = getSinglePractitioner(siteID, customerName,
-							practitionerId);
-
-					if (singlePractitioner != null && singlePractitioner.getProviders() != null
-							&& !singlePractitioner.getProviders().isEmpty()) {
-
-						Practitioner providerDetails = singlePractitioner.getProviders().get(0);
-
-						// Use MapStruct to map Practitioner to ProviderDTO
-						practitioner = PractitionerMapper.INSTANCE.practitionerToProviderDTO(providerDetails);
-					}
+				if (practitionerMap.containsKey(appointment.getPractitionerId())) {
+					appointment.setDoctorInfo(practitionerMap.get(appointment.getPractitionerId()));
+				} else {
+					appointment.setDoctorInfo(new ProviderDTO());
 				}
-				appointment.setDoctorInfo(practitioner);
-				appointment.setLocationInfo(location);
 			});
 
 			return response;
 		} catch (Exception e) {
-			e.printStackTrace();
 			logger.severe("Error occurred while retrieving Appointments: " + e.getMessage());
 			throw new RuntimeException("Error occurred while retrieving Appointments: " + e.getMessage(), e);
 		}
 	}
+
+//	@Async
+//	public CompletableFuture<ProviderDTO> fetchPractitionerAsync(String siteID, String customerName,
+//			String practitionerId) {
+//		return CompletableFuture.supplyAsync(() -> {
+//			try {
+//				List<SinglePractitioner200Response> practitionerResponses = singlePractitionerBulkApi
+//						.singlePractitioners(siteID, customerName, new ArrayList<>(List.of(practitionerId)));
+//				System.out.println("Fetched practitioner responses: " + practitionerResponses);
+//				if (practitionerResponses != null && !practitionerResponses.isEmpty()
+//						&& practitionerResponses.get(0).getProviders() != null
+//						&& !practitionerResponses.get(0).getProviders().isEmpty()) {
+//					return PractitionerMapper.INSTANCE
+//							.practitionerToProviderDTO(practitionerResponses.get(0).getProviders().get(0));
+//				}
+//			} catch (RestClientResponseException e) {
+//				logger.severe("Error fetching practitioner for ID " + practitionerId + ": " + e.getMessage());
+//			}
+//			return null;
+//		});
+//	}
+//
+//	public CompletableFuture<Map<String, ProviderDTO>> getPractitionersInBulk(String siteID, String customerName,
+//			Set<String> practitionerIds) {
+//		if (practitionerIds.isEmpty()) {
+//			return CompletableFuture.completedFuture(Collections.emptyMap());
+//		}
+//
+//		List<CompletableFuture<ProviderDTO>> futures = practitionerIds.stream()
+//				.map(practitionerId -> fetchPractitionerAsync(siteID, customerName, practitionerId))
+//				.collect(Collectors.toList());
+//
+//		return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+//				.thenApply(voidResult -> futures.stream().map(CompletableFuture::join).filter(Objects::nonNull)
+//						.collect(Collectors.toMap(ProviderDTO::getProviderId, provider -> provider)));
+//	}
+
+	@Autowired
+	private RedisTemplate<String, LocationDTO> redisLocationTemplate;
+
+	@Autowired
+	private RedisTemplate<String, ProviderDTO> redisPractitionerTemplate;
+
+	public ProviderDTO fetchPractitioner(String siteID, String customerName, String practitionerId) {
+		ValueOperations<String, ProviderDTO> ops = redisPractitionerTemplate.opsForValue();
+		String redisKey = "practitioner:" + practitionerId;
+		System.out.println("REDIS PRACTITIONER KEY: " + redisKey);
+		ProviderDTO cachedPractitioner = ops.get(redisKey);
+		System.out.println("CACHED DATA: " + cachedPractitioner);
+
+		if (cachedPractitioner != null) {
+			System.out.println("CACHE HIT for practitionerId: " + practitionerId);
+			return cachedPractitioner;
+		}
+
+		System.out.println("CACHE MISS for practitionerId: " + practitionerId);
+		try {
+			System.out.println("HITTING API for practitionerId: " + practitionerId);
+			List<SinglePractitioner200Response> practitionerResponses = singlePractitionerBulkApi
+					.singlePractitioners(siteID, customerName, new ArrayList<>(List.of(practitionerId)));
+			if (practitionerResponses != null && !practitionerResponses.isEmpty()
+					&& practitionerResponses.get(0).getProviders() != null
+					&& !practitionerResponses.get(0).getProviders().isEmpty()) {
+				ProviderDTO providerDTO = PractitionerMapper.INSTANCE
+						.practitionerToProviderDTO(practitionerResponses.get(0).getProviders().get(0));
+				ops.set("practitioner:" + practitionerId, providerDTO);
+				System.out.println("Stored in cache with key: " + practitionerId + ", value: " + providerDTO);
+				return providerDTO;
+			}
+		} catch (RestClientResponseException e) {
+			logger.severe("Error fetching practitioner for ID " + practitionerId + ": " + e.getMessage());
+		}
+		return null;
+	}
+
+	public Map<String, ProviderDTO> getPractitionersInBulk(String siteID, String customerName,
+			Set<String> practitionerIds) {
+		setToken();
+
+		if (practitionerIds.isEmpty()) {
+			return Collections.emptyMap();
+		}
+
+		Map<String, ProviderDTO> practitionersMap = new HashMap<>();
+		System.out.println("Processing practitioners in bulk");
+
+		for (String practitionerId : practitionerIds) {
+			ProviderDTO providerDTO = fetchPractitioner(siteID, customerName, practitionerId);
+			if (providerDTO != null) {
+				practitionersMap.put(providerDTO.getProviderId(), providerDTO);
+			}
+		}
+
+		System.out.println("Completed processing practitioners in bulk");
+		return practitionersMap;
+	}
+
+	public LocationDTO fetchLocation(String siteID, String customerName, String locationId) {
+		ValueOperations<String, LocationDTO> ops = redisLocationTemplate.opsForValue();
+		String redisKey = "location:" + locationId;
+		System.out.println("REDIS LOCATION KEY: " + redisKey);
+		LocationDTO cachedLocation = ops.get(redisKey);
+		System.out.println("CACHED DATA: " + cachedLocation);
+
+		if (cachedLocation != null) {
+			System.out.println("CACHE HIT for locationId: " + locationId);
+			return cachedLocation;
+		}
+
+		System.out.println("CACHE MISS for locationId: " + locationId);
+		try {
+			System.out.println("HITTING API for locationId: " + locationId);
+			List<SingleLocation200Response> locationResponses = singleLocationBulkApi.singleLocations(siteID,
+					customerName, new ArrayList<>(List.of(locationId)));
+			if (locationResponses != null && !locationResponses.isEmpty()
+					&& locationResponses.get(0).getLocations() != null
+					&& !locationResponses.get(0).getLocations().isEmpty()) {
+				LocationDTO locationDTO = LocationMapper.INSTANCE
+						.LocationToLocationDTO(locationResponses.get(0).getLocations().get(0));
+				ops.set("location:" + locationId, locationDTO);
+				return locationDTO;
+			}
+		} catch (RestClientResponseException e) {
+			logger.severe("Error fetching location for ID " + locationId + ": " + e.getMessage());
+		}
+		return null;
+	}
+
+	public Map<String, LocationDTO> getLocationsInBulk(String siteID, String customerName, Set<String> locationIds) {
+		setToken();
+
+		if (locationIds.isEmpty()) {
+			return Collections.emptyMap();
+		}
+
+		Map<String, LocationDTO> locationsMap = new HashMap<>();
+
+		for (String locationId : locationIds) {
+			LocationDTO locationDTO = fetchLocation(siteID, customerName, locationId);
+			if (locationDTO != null) {
+				locationsMap.put(locationDTO.getLocationId(), locationDTO);
+			}
+		}
+
+		return locationsMap;
+	}
+
+//	@Async
+//	public CompletableFuture<LocationDTO> fetchLocationAsync(String siteID, String customerName, String locationId) {
+//		return CompletableFuture.supplyAsync(() -> {
+//			try {
+//				List<SingleLocation200Response> locationResponses = singleLocationBulkApi.singleLocations(siteID,
+//						customerName, new ArrayList<>(List.of(locationId)));
+//				System.out.println("XXXXXXXXXXX: " + locationResponses);
+//				if (locationResponses != null && !locationResponses.isEmpty()
+//						&& locationResponses.get(0).getLocations() != null
+//						&& !locationResponses.get(0).getLocations().isEmpty()) {
+//					return LocationMapper.INSTANCE
+//							.LocationToLocationDTO(locationResponses.get(0).getLocations().get(0));
+//				}
+//			} catch (RestClientResponseException e) {
+//				logger.severe("Error fetching location for ID " + locationId + ": " + e.getMessage());
+//			}
+//			return null;
+//		});
+//	}
+//
+//	public CompletableFuture<Map<String, LocationDTO>> getLocationsInBulk(String siteID, String customerName,
+//			Set<String> locationIds) {
+//		setToken();
+//
+//		if (locationIds.isEmpty()) {
+//			return CompletableFuture.completedFuture(Collections.emptyMap());
+//		}
+//
+//		List<CompletableFuture<LocationDTO>> futures = locationIds.stream()
+//				.map(locationId -> fetchLocationAsync(siteID, customerName, locationId)).collect(Collectors.toList());
+//
+//		return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+//				.thenApply(voidResult -> futures.stream().map(CompletableFuture::join).filter(Objects::nonNull)
+//						.collect(Collectors.toMap(LocationDTO::getLocationId, location -> location)));
+//	}
 
 	public Object getSlots(String siteID, String customerName, String appointmentType, String startDate) {
 		try {
@@ -756,6 +1056,7 @@ public class TenBridgeService extends BaseService {
 				logger.severe("API returned empty data");
 				return new SingleLocation200Response();
 			}
+			System.out.println(apiResponse);
 			return apiResponse;
 		} catch (Exception e) {
 			logger.severe("Error occurred while retrieving location: " + e.getMessage());
@@ -781,6 +1082,7 @@ public class TenBridgeService extends BaseService {
 				return new SinglePractitioner200Response();
 //				throw new RuntimeException("Error occurred while retrieving Practitioner: Empty Practitioner");
 			}
+			System.out.println(apiResponse);
 			return apiResponse;
 		} catch (Exception e) {
 			logger.severe("Error occurred while retrieving Practitioner: " + e.getMessage());
@@ -859,6 +1161,21 @@ public class TenBridgeService extends BaseService {
 			logger.severe("Error occurred while creating Appointment: " + e.getMessage());
 			throw new RuntimeException("Error occurred while creating Appointment: " + e.getMessage(), e);
 		}
+	}
+
+	public LocationDTO getLocationFromRedis(String redisKey) {
+		ValueOperations<String, LocationDTO> ops = redisLocationTemplate.opsForValue();
+		System.out.println("REDIS LOCATION KEY: " + redisKey);
+		LocationDTO cachedLocation = ops.get(redisKey);
+		System.out.println("CACHED DATA: " + cachedLocation);
+
+		if (cachedLocation != null) {
+			System.out.println("CACHE HIT for Redis key: " + redisKey);
+			return cachedLocation;
+		}
+
+		System.out.println("CACHE MISS for Redis key: " + redisKey);
+		return null;
 	}
 
 //	public void setToken() {

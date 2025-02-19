@@ -1,8 +1,10 @@
 package com.ps.tenbridge.datahub.controller;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
@@ -10,6 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,9 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ps.tenbridge.datahub.controllerImpl.TenBridgeService;
 import com.ps.tenbridge.datahub.dto.AppointmentInfoDTO;
+import com.ps.tenbridge.datahub.dto.LocationDTO;
+import com.ps.tenbridge.datahub.dto.ProviderDTO;
 import com.ps.tenbridge.datahub.utility.EncryptionHelper;
 import com.ps.tenbridge.datahub.utility.EncryptionKeyConstants;
-import com.veradigm.ps.tenbridge.client.models.Appointment;
 
 @RestController
 @RequestMapping("/api")
@@ -339,6 +344,71 @@ public class TenBridgeController {
 			return new ResponseEntity<>("Error occurred while creating appointment", HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
+
+//	@PostMapping("/bulk-locations")
+//	public CompletableFuture<ResponseEntity<Map<String, LocationDTO>>> fetchLocationsInBulk(
+//			@RequestBody Map<String, Object> requestBody) {
+//		String siteID = (String) requestBody.get("siteID");
+//		String customerName = (String) requestBody.get("customerName");
+//		List<String> locationIdList = (List<String>) requestBody.get("locationIds");
+//
+//		// Convert the List of location IDs to a Set
+//		Set<String> locationIds = new HashSet<>(locationIdList);
+//		return tenBridgeService.getLocationsInBulk(siteID, customerName, locationIds)
+//				.thenApply(locations -> ResponseEntity.ok(locations));
+//	}
+
+	@PostMapping("/bulk-locations")
+	public ResponseEntity<Map<String, LocationDTO>> fetchLocationsInBulk(@RequestBody Map<String, Object> requestBody) {
+		String siteID = (String) requestBody.get("siteID");
+		String customerName = (String) requestBody.get("customerName");
+		List<String> locationIdList = (List<String>) requestBody.get("locationIds");
+
+		// Convert the List of location IDs to a Set
+		Set<String> locationIds = new HashSet<>(locationIdList);
+
+		Map<String, LocationDTO> locations = tenBridgeService.getLocationsInBulk(siteID, customerName, locationIds);
+		return ResponseEntity.ok(locations);
+	}
+
+	@PostMapping("/bulk-practitioners")
+	public ResponseEntity<Map<String, ProviderDTO>> fetchPractitionersInBulk(
+			@RequestBody Map<String, Object> requestBody) {
+		String siteID = (String) requestBody.get("siteID");
+		String customerName = (String) requestBody.get("customerName");
+		List<String> practitionerIdList = (List<String>) requestBody.get("practitionerIds");
+
+		// Convert the List of practitioner IDs to a Set
+		Set<String> practitionerIds = new HashSet<>(practitionerIdList);
+
+		Map<String, ProviderDTO> practitioners = tenBridgeService.getPractitionersInBulk(siteID, customerName,
+				practitionerIds);
+		return ResponseEntity.ok(practitioners);
+	}
+
+	@GetMapping("location-from-redis/{redisKey}")
+	public ResponseEntity<LocationDTO> getLocation(@PathVariable String redisKey) {
+		LocationDTO locationDTO = tenBridgeService.getLocationFromRedis(redisKey);
+		if (locationDTO != null) {
+			return new ResponseEntity<>(locationDTO, HttpStatus.OK);
+		} else {
+			return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+		}
+	}
+
+//	@PostMapping("/bulk-practitioners")
+//	public CompletableFuture<ResponseEntity<Map<String, ProviderDTO>>> fetchPractitionersInBulk(
+//			@RequestBody Map<String, Object> requestBody) {
+//		String siteID = (String) requestBody.get("siteID");
+//		String customerName = (String) requestBody.get("customerName");
+//		List<String> practitionerIdList = (List<String>) requestBody.get("practitionerIds");
+//
+//		// Convert the List of practitioner IDs to a Set
+//		Set<String> practitionerIds = new HashSet<>(practitionerIdList);
+//
+//		return tenBridgeService.getPractitionersInBulk(siteID, customerName, practitionerIds)
+//				.thenApply(practitioners -> ResponseEntity.ok(practitioners));
+//	}
 
 	private ResponseEntity<Object> processRequest(Map<String, String> request, List<String> requiredAttributes,
 			String entityName, BiFunction<String, String, Object> serviceCall) {

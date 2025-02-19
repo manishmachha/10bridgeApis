@@ -813,12 +813,6 @@ components:
           type: boolean
         full_name:
           type: string
-        first_name:
-          type: string
-        last_name:
-          type: string
-        middle_name:
-          type: string
         abbreviation:
           type: string
         is_active:
@@ -826,8 +820,7 @@ components:
       required:
         - Practitioner_id
         - speciality
-        - first_name
-        - last_name
+        - full_name
         - abbreviation
     NewPatient:
       type: object
@@ -881,10 +874,10 @@ components:
       properties:
         patientProfileID:
           type: string
-        patient_id:
+        patient_id:  
           type: string
         practitioner_id:
-          type: integer
+          type: string
         insurances:
           type: array
           items:
@@ -1016,10 +1009,8 @@ components:
           type: string
         start_date:
           type: string
-          format: "date"
         end_date:
           type: string
-          format: "date"
         provider:
           $ref: "#/components/schemas/Practitioner"
         location:
@@ -1187,21 +1178,21 @@ components:
     PatientRequest:
       type: object
       properties:
-        meta:
-          $ref: "#/components/schemas/RequestMetaData"
+        meta: 
+          $ref: '#/components/schemas/RequestMetaData'
         data:
           type: object
           properties:
             first_name:
               type: string
-            last_name:
+            last_name: 
               type: string
             date_of_birth:
-              type: string
+              type: string 
           required:
             - last_name
-            - date_of_birth
-
+            - date_of_birth          
+    
     AppointmentNotesRequest:
       type: object
       properties:
@@ -1227,7 +1218,7 @@ components:
       type: object
       properties:
         requested_appointment_id:
-          type: string
+          type: string	
         appointment_date:
           type: string
         appointment_duration:
@@ -1319,9 +1310,9 @@ components:
       type: object
       properties:
         appointmentCancelStatus:
-          type: boolean
+          type : boolean
         appointment_id:
-          type: string
+          type : string
     NewAppointmentRequest:
       type: object
       properties:
@@ -1355,7 +1346,6 @@ components:
               type: string
           required:
             - Location_id
-            - meta
     SinglePractitionerRequest:
       type: object
       properties:
@@ -1367,8 +1357,7 @@ components:
             Practitioner_id:
               type: string
           required:
-            - Practitioner_id
-            - meta
+              - Practitioner_id
     PatientInsuranceRequest:
       type: object
       properties:
