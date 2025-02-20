@@ -11,6 +11,10 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -120,6 +124,7 @@ import com.veradigm.ps.tenbridge.client.models.SlotRequestData;
 
 @Service
 @EnableAsync
+@EnableCaching
 public class TenBridgeService extends BaseService {
 
 	private static final Logger logger = Logger.getLogger(TenBridgeService.class.getName());
@@ -176,7 +181,8 @@ public class TenBridgeService extends BaseService {
 	private SingleLocationsUtil singleLocationBulkApi;
 	@Autowired
 	private SinglePractitionersUtil singlePractitionerBulkApi;
-
+	@Autowired
+	private CacheManager cacheManager;
 	private final OAuth2Config oauth;
 
 	public TenBridgeService(ApiClient apiClient, TokenService ts, OAuth2Config oauth, GetProvidersApi providersApi,
@@ -471,7 +477,7 @@ public class TenBridgeService extends BaseService {
 
 			// Map<String, ProviderDTO> practitionerMap = getPractitionersInBulk(siteID,
 			// customerName, practitionerIds).get();
-			Map<String, ProviderDTO> practitionerMap = getPractitionersInBulk(siteID, customerName, practitionerIds);
+			Map<String, ProviderDTO> practitionerMap = getPractitionersInCache(siteID, customerName, practitionerIds);
 
 			response.forEach(patientInfo -> {
 				patientInfo.setPrefDoc(practitionerMap.get(patientInfo.getPractitionerId()));
@@ -519,11 +525,11 @@ public class TenBridgeService extends BaseService {
 
 			// Map<String, LocationDTO> locationMap = getLocationsInBulk(siteID,
 			// customerName, locationIds).get();
-			Map<String, LocationDTO> locationMap = getLocationsInBulk(siteID, customerName, locationIds);
+			Map<String, LocationDTO> locationMap = getLocationsInCache(siteID, customerName, locationIds);
 
 			// Map<String, ProviderDTO> practitionerMap = getPractitionersInBulk(siteID,
 			// customerName, practitionerIds).get();
-			Map<String, ProviderDTO> practitionerMap = getPractitionersInBulk(siteID, customerName, practitionerIds);
+			Map<String, ProviderDTO> practitionerMap = getPractitionersInCache(siteID, customerName, practitionerIds);
 
 			// Assign fetched data to appointments
 			response.forEach(appointment -> {
@@ -546,19 +552,153 @@ public class TenBridgeService extends BaseService {
 		}
 	}
 
+	@Autowired
+	private RedisTemplate<String, LocationDTO> redisLocationTemplate;
+//
+//	@Autowired
+//	private RedisTemplate<String, ProviderDTO> redisPractitionerTemplate;
+
+//	public ProviderDTO fetchPractitioner(String siteID, String customerName, String practitionerId) {
+//		ValueOperations<String, ProviderDTO> ops = redisPractitionerTemplate.opsForValue();
+//		String redisKey = "practitioner:" + practitionerId;
+//		logger.info("REDIS PRACTITIONER KEY: " + redisKey);
+//		ProviderDTO cachedPractitioner = ops.get(redisKey);
+//		logger.info("CACHED DATA: " + cachedPractitioner);
+//
+//		if (cachedPractitioner != null) {
+//			logger.info("CACHE HIT for practitionerId: " + practitionerId);
+//			return cachedPractitioner;
+//		}
+//
+//		logger.warning("CACHE MISS for practitionerId: " + practitionerId);
+//		try {
+//			logger.info("HITTING API for practitionerId: " + practitionerId);
+//			List<SinglePractitioner200Response> practitionerResponses = singlePractitionerBulkApi
+//					.singlePractitioners(siteID, customerName, new ArrayList<>(List.of(practitionerId)));
+//			if (practitionerResponses != null && !practitionerResponses.isEmpty()
+//					&& practitionerResponses.get(0).getProviders() != null
+//					&& !practitionerResponses.get(0).getProviders().isEmpty()) {
+//				ProviderDTO providerDTO = PractitionerMapper.INSTANCE
+//						.practitionerToProviderDTO(practitionerResponses.get(0).getProviders().get(0));
+//				ops.set("practitioner:" + practitionerId, providerDTO);
+//				System.out.println("Stored in cache with key: " + practitionerId + ", value: " + providerDTO);
+//				return providerDTO;
+//			}
+//		} catch (RestClientResponseException e) {
+//			logger.severe("Error fetching practitioner for ID " + practitionerId + ": " + e.getMessage());
+//		}
+//		return null;
+//	}
+//
+//	public Map<String, ProviderDTO> getPractitionersInBulk(String siteID, String customerName,
+//			Set<String> practitionerIds) {
+//		setToken();
+//
+//		if (practitionerIds.isEmpty()) {
+//			return Collections.emptyMap();
+//		}
+//
+//		Map<String, ProviderDTO> practitionersMap = new HashMap<>();
+//		System.out.println("Processing practitioners in bulk");
+//
+//		for (String practitionerId : practitionerIds) {
+//			ProviderDTO providerDTO = fetchPractitioner(siteID, customerName, practitionerId);
+//			if (providerDTO != null) {
+//				practitionersMap.put(providerDTO.getProviderId(), providerDTO);
+//			}
+//		}
+//
+//		System.out.println("Completed processing practitioners in bulk");
+//		return practitionersMap;
+//	}
+
+	@Cacheable(value = "practitioners", key = "'practitioner:' + #practitionerId") // Ensures that API-fetched data is
+																					// stored in cache
+	public ProviderDTO fetchPractitioner(String siteID, String customerName, String practitionerId) {
+		Cache cache = cacheManager.getCache("practitioners");
+
+		// Check if data is present in cache
+		if (cache != null) {
+			Cache.ValueWrapper cachedValue = cache.get("practitioner:" + practitionerId);
+			if (cachedValue != null) {
+				logger.info("Cache HIT: Returning practitionerId " + practitionerId + " from cache.");
+				return (ProviderDTO) cachedValue.get();
+			}
+		}
+
+		// If not found in cache, fetch from API
+		logger.info("Cache MISS: HITTING API for practitionerId: " + practitionerId);
+		try {
+			List<SinglePractitioner200Response> practitionerResponses = singlePractitionerBulkApi
+					.singlePractitioners(siteID, customerName, new ArrayList<>(List.of(practitionerId)));
+
+			if (practitionerResponses != null && !practitionerResponses.isEmpty()
+					&& practitionerResponses.get(0).getProviders() != null
+					&& !practitionerResponses.get(0).getProviders().isEmpty()) {
+
+				ProviderDTO providerDTO = PractitionerMapper.INSTANCE
+						.practitionerToProviderDTO(practitionerResponses.get(0).getProviders().get(0));
+
+				// Store result in cache
+				if (cache != null) {
+					cache.put("practitioner:" + practitionerId, providerDTO);
+					logger.info("Stored practitionerId " + practitionerId + " in cache.");
+				}
+
+				return providerDTO;
+			}
+		} catch (RestClientResponseException e) {
+			logger.severe("Error fetching practitioner for ID " + practitionerId + ": " + e.getMessage());
+		}
+
+		return null;
+	}
+
+	public Map<String, ProviderDTO> getPractitionersInCache(String siteID, String customerName,
+			Set<String> practitionerIds) {
+		setToken();
+		if (practitionerIds.isEmpty()) {
+			return Collections.emptyMap();
+		}
+
+		Map<String, ProviderDTO> practitionersMap = new HashMap<>();
+		for (String practitionerId : practitionerIds) {
+			ProviderDTO providerDTO = fetchPractitioner(siteID, customerName, practitionerId);
+			if (providerDTO != null) {
+				practitionersMap.put(providerDTO.getProviderId(), providerDTO);
+			}
+		}
+		return practitionersMap;
+	}
+
 //	@Async
 //	public CompletableFuture<ProviderDTO> fetchPractitionerAsync(String siteID, String customerName,
 //			String practitionerId) {
+//		ValueOperations<String, ProviderDTO> ops = redisPractitionerTemplate.opsForValue();
+//		String redisKey = "practitioner:" + practitionerId;
+//		logger.info("REDIS PRACTITIONER KEY: " + redisKey);
+//		ProviderDTO cachedPractitioner = ops.get(redisKey);
+//		logger.info("CACHED DATA: " + cachedPractitioner);
+//
+//		if (cachedPractitioner != null) {
+//			logger.info("CACHE HIT for practitionerId: " + practitionerId);
+//			return CompletableFuture.completedFuture(cachedPractitioner);
+//		}
+//
+//		logger.warning("CACHE MISS for practitionerId: " + practitionerId);
 //		return CompletableFuture.supplyAsync(() -> {
 //			try {
+//				logger.info("HITTING API for practitionerId: " + practitionerId);
 //				List<SinglePractitioner200Response> practitionerResponses = singlePractitionerBulkApi
 //						.singlePractitioners(siteID, customerName, new ArrayList<>(List.of(practitionerId)));
-//				System.out.println("Fetched practitioner responses: " + practitionerResponses);
 //				if (practitionerResponses != null && !practitionerResponses.isEmpty()
 //						&& practitionerResponses.get(0).getProviders() != null
 //						&& !practitionerResponses.get(0).getProviders().isEmpty()) {
-//					return PractitionerMapper.INSTANCE
+//					ProviderDTO providerDTO = PractitionerMapper.INSTANCE
 //							.practitionerToProviderDTO(practitionerResponses.get(0).getProviders().get(0));
+//					ops.set("practitioner:" + practitionerId, providerDTO);
+//					System.out.println("Stored in cache with key: " + practitionerId + ", value: " + providerDTO);
+//					return providerDTO;
 //				}
 //			} catch (RestClientResponseException e) {
 //				logger.severe("Error fetching practitioner for ID " + practitionerId + ": " + e.getMessage());
@@ -567,8 +707,10 @@ public class TenBridgeService extends BaseService {
 //		});
 //	}
 //
-//	public CompletableFuture<Map<String, ProviderDTO>> getPractitionersInBulk(String siteID, String customerName,
+//	public CompletableFuture<Map<String, ProviderDTO>> getPractitionersInBulkAsync(String siteID, String customerName,
 //			Set<String> practitionerIds) {
+//		setToken();
+//
 //		if (practitionerIds.isEmpty()) {
 //			return CompletableFuture.completedFuture(Collections.emptyMap());
 //		}
@@ -582,128 +724,82 @@ public class TenBridgeService extends BaseService {
 //						.collect(Collectors.toMap(ProviderDTO::getProviderId, provider -> provider)));
 //	}
 
-	@Autowired
-	private RedisTemplate<String, LocationDTO> redisLocationTemplate;
-
-	@Autowired
-	private RedisTemplate<String, ProviderDTO> redisPractitionerTemplate;
-
-	public ProviderDTO fetchPractitioner(String siteID, String customerName, String practitionerId) {
-		ValueOperations<String, ProviderDTO> ops = redisPractitionerTemplate.opsForValue();
-		String redisKey = "practitioner:" + practitionerId;
-		System.out.println("REDIS PRACTITIONER KEY: " + redisKey);
-		ProviderDTO cachedPractitioner = ops.get(redisKey);
-		System.out.println("CACHED DATA: " + cachedPractitioner);
-
-		if (cachedPractitioner != null) {
-			System.out.println("CACHE HIT for practitionerId: " + practitionerId);
-			return cachedPractitioner;
-		}
-
-		System.out.println("CACHE MISS for practitionerId: " + practitionerId);
-		try {
-			System.out.println("HITTING API for practitionerId: " + practitionerId);
-			List<SinglePractitioner200Response> practitionerResponses = singlePractitionerBulkApi
-					.singlePractitioners(siteID, customerName, new ArrayList<>(List.of(practitionerId)));
-			if (practitionerResponses != null && !practitionerResponses.isEmpty()
-					&& practitionerResponses.get(0).getProviders() != null
-					&& !practitionerResponses.get(0).getProviders().isEmpty()) {
-				ProviderDTO providerDTO = PractitionerMapper.INSTANCE
-						.practitionerToProviderDTO(practitionerResponses.get(0).getProviders().get(0));
-				ops.set("practitioner:" + practitionerId, providerDTO);
-				System.out.println("Stored in cache with key: " + practitionerId + ", value: " + providerDTO);
-				return providerDTO;
-			}
-		} catch (RestClientResponseException e) {
-			logger.severe("Error fetching practitioner for ID " + practitionerId + ": " + e.getMessage());
-		}
-		return null;
-	}
-
-	public Map<String, ProviderDTO> getPractitionersInBulk(String siteID, String customerName,
-			Set<String> practitionerIds) {
-		setToken();
-
-		if (practitionerIds.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<String, ProviderDTO> practitionersMap = new HashMap<>();
-		System.out.println("Processing practitioners in bulk");
-
-		for (String practitionerId : practitionerIds) {
-			ProviderDTO providerDTO = fetchPractitioner(siteID, customerName, practitionerId);
-			if (providerDTO != null) {
-				practitionersMap.put(providerDTO.getProviderId(), providerDTO);
-			}
-		}
-
-		System.out.println("Completed processing practitioners in bulk");
-		return practitionersMap;
-	}
-
-	public LocationDTO fetchLocation(String siteID, String customerName, String locationId) {
-		ValueOperations<String, LocationDTO> ops = redisLocationTemplate.opsForValue();
-		String redisKey = "location:" + locationId;
-		System.out.println("REDIS LOCATION KEY: " + redisKey);
-		LocationDTO cachedLocation = ops.get(redisKey);
-		System.out.println("CACHED DATA: " + cachedLocation);
-
-		if (cachedLocation != null) {
-			System.out.println("CACHE HIT for locationId: " + locationId);
-			return cachedLocation;
-		}
-
-		System.out.println("CACHE MISS for locationId: " + locationId);
-		try {
-			System.out.println("HITTING API for locationId: " + locationId);
-			List<SingleLocation200Response> locationResponses = singleLocationBulkApi.singleLocations(siteID,
-					customerName, new ArrayList<>(List.of(locationId)));
-			if (locationResponses != null && !locationResponses.isEmpty()
-					&& locationResponses.get(0).getLocations() != null
-					&& !locationResponses.get(0).getLocations().isEmpty()) {
-				LocationDTO locationDTO = LocationMapper.INSTANCE
-						.LocationToLocationDTO(locationResponses.get(0).getLocations().get(0));
-				ops.set("location:" + locationId, locationDTO);
-				return locationDTO;
-			}
-		} catch (RestClientResponseException e) {
-			logger.severe("Error fetching location for ID " + locationId + ": " + e.getMessage());
-		}
-		return null;
-	}
-
-	public Map<String, LocationDTO> getLocationsInBulk(String siteID, String customerName, Set<String> locationIds) {
-		setToken();
-
-		if (locationIds.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<String, LocationDTO> locationsMap = new HashMap<>();
-
-		for (String locationId : locationIds) {
-			LocationDTO locationDTO = fetchLocation(siteID, customerName, locationId);
-			if (locationDTO != null) {
-				locationsMap.put(locationDTO.getLocationId(), locationDTO);
-			}
-		}
-
-		return locationsMap;
-	}
+//	public LocationDTO fetchLocation(String siteID, String customerName, String locationId) {
+//		ValueOperations<String, LocationDTO> ops = redisLocationTemplate.opsForValue();
+//		String redisKey = "location:" + locationId;
+//		logger.info("REDIS LOCATION KEY: " + redisKey);
+//		LocationDTO cachedLocation = ops.get(redisKey);
+//		logger.info("CACHED DATA: " + cachedLocation);
+//
+//		if (cachedLocation != null) {
+//			logger.info("CACHE HIT for locationId: " + locationId);
+//			return cachedLocation;
+//		}
+//
+//		logger.warning("CACHE MISS for locationId: " + locationId);
+//		try {
+//			System.out.println("HITTING API for locationId: " + locationId);
+//			List<SingleLocation200Response> locationResponses = singleLocationBulkApi.singleLocations(siteID,
+//					customerName, new ArrayList<>(List.of(locationId)));
+//			if (locationResponses != null && !locationResponses.isEmpty()
+//					&& locationResponses.get(0).getLocations() != null
+//					&& !locationResponses.get(0).getLocations().isEmpty()) {
+//				LocationDTO locationDTO = LocationMapper.INSTANCE
+//						.LocationToLocationDTO(locationResponses.get(0).getLocations().get(0));
+//				ops.set("location:" + locationId, locationDTO);
+//				return locationDTO;
+//			}
+//		} catch (RestClientResponseException e) {
+//			logger.severe("Error fetching location for ID " + locationId + ": " + e.getMessage());
+//		}
+//		return null;
+//	}
+//
+//	public Map<String, LocationDTO> getLocationsInBulk(String siteID, String customerName, Set<String> locationIds) {
+//		setToken();
+//
+//		if (locationIds.isEmpty()) {
+//			return Collections.emptyMap();
+//		}
+//
+//		Map<String, LocationDTO> locationsMap = new HashMap<>();
+//
+//		for (String locationId : locationIds) {
+//			LocationDTO locationDTO = fetchLocation(siteID, customerName, locationId);
+//			if (locationDTO != null) {
+//				locationsMap.put(locationDTO.getLocationId(), locationDTO);
+//			}
+//		}
+//
+//		return locationsMap;
+//	}
 
 //	@Async
 //	public CompletableFuture<LocationDTO> fetchLocationAsync(String siteID, String customerName, String locationId) {
+//		ValueOperations<String, LocationDTO> ops = redisLocationTemplate.opsForValue();
+//		String redisKey = "location:" + locationId;
+//		logger.info("REDIS LOCATION KEY: " + redisKey);
+//		LocationDTO cachedLocation = ops.get(redisKey);
+//		logger.info("CACHED DATA: " + cachedLocation);
+//
+//		if (cachedLocation != null) {
+//			logger.info("CACHE HIT for locationId: " + locationId);
+//			return CompletableFuture.completedFuture(cachedLocation);
+//		}
+//
+//		logger.warning("CACHE MISS for locationId: " + locationId);
 //		return CompletableFuture.supplyAsync(() -> {
 //			try {
+//				System.out.println("HITTING API for locationId: " + locationId);
 //				List<SingleLocation200Response> locationResponses = singleLocationBulkApi.singleLocations(siteID,
 //						customerName, new ArrayList<>(List.of(locationId)));
-//				System.out.println("XXXXXXXXXXX: " + locationResponses);
 //				if (locationResponses != null && !locationResponses.isEmpty()
 //						&& locationResponses.get(0).getLocations() != null
 //						&& !locationResponses.get(0).getLocations().isEmpty()) {
-//					return LocationMapper.INSTANCE
+//					LocationDTO locationDTO = LocationMapper.INSTANCE
 //							.LocationToLocationDTO(locationResponses.get(0).getLocations().get(0));
+//					ops.set("location:" + locationId, locationDTO);
+//					return locationDTO;
 //				}
 //			} catch (RestClientResponseException e) {
 //				logger.severe("Error fetching location for ID " + locationId + ": " + e.getMessage());
@@ -712,7 +808,7 @@ public class TenBridgeService extends BaseService {
 //		});
 //	}
 //
-//	public CompletableFuture<Map<String, LocationDTO>> getLocationsInBulk(String siteID, String customerName,
+//	public CompletableFuture<Map<String, LocationDTO>> getLocationsInBulkAsync(String siteID, String customerName,
 //			Set<String> locationIds) {
 //		setToken();
 //
@@ -727,6 +823,79 @@ public class TenBridgeService extends BaseService {
 //				.thenApply(voidResult -> futures.stream().map(CompletableFuture::join).filter(Objects::nonNull)
 //						.collect(Collectors.toMap(LocationDTO::getLocationId, location -> location)));
 //	}
+
+	@Cacheable(value = "locations", key = "'location:' + #locationId") // Ensures that API-fetched data is stored in
+																		// cache
+	public LocationDTO fetchLocation(String siteID, String customerName, String locationId) {
+		Cache cache = cacheManager.getCache("locations");
+
+		// Check if data is present in cache
+		if (cache != null) {
+			Cache.ValueWrapper cachedValue = cache.get("location:" + locationId);
+			if (cachedValue != null) {
+				logger.info("Cache HIT: Returning locationId " + locationId + " from cache.");
+				return (LocationDTO) cachedValue.get();
+			}
+		}
+
+		// If not found in cache, fetch from API
+		logger.info("Cache MISS: HITTING API for locationId: " + locationId);
+		try {
+			List<SingleLocation200Response> locationResponses = singleLocationBulkApi.singleLocations(siteID,
+					customerName, new ArrayList<>(List.of(locationId)));
+
+			if (locationResponses != null && !locationResponses.isEmpty()
+					&& locationResponses.get(0).getLocations() != null
+					&& !locationResponses.get(0).getLocations().isEmpty()) {
+
+				LocationDTO locationDTO = LocationMapper.INSTANCE
+						.LocationToLocationDTO(locationResponses.get(0).getLocations().get(0));
+
+				// Store result in cache
+				if (cache != null) {
+					cache.put("location:" + locationId, locationDTO);
+					logger.info("Stored locationId " + locationId + " in cache.");
+				}
+
+				return locationDTO;
+			}
+		} catch (RestClientResponseException e) {
+			logger.severe("Error fetching location for ID " + locationId + ": " + e.getMessage());
+		}
+
+		return null;
+	}
+
+	public Map<String, LocationDTO> getLocationsInCache(String siteID, String customerName, Set<String> locationIds) {
+		setToken();
+		if (locationIds.isEmpty()) {
+			return Collections.emptyMap();
+		}
+
+		Map<String, LocationDTO> locationsMap = new HashMap<>();
+		for (String locationId : locationIds) {
+			LocationDTO locationDTO = fetchLocation(siteID, customerName, locationId);
+			if (locationDTO != null) {
+				locationsMap.put(locationDTO.getLocationId(), locationDTO);
+			}
+		}
+		return locationsMap;
+	}
+
+	public LocationDTO getLocationFromRedis(String redisKey) {
+		ValueOperations<String, LocationDTO> ops = redisLocationTemplate.opsForValue();
+		System.out.println("REDIS LOCATION KEY: " + redisKey);
+		LocationDTO cachedLocation = ops.get(redisKey);
+		System.out.println("CACHED DATA: " + cachedLocation);
+
+		if (cachedLocation != null) {
+			System.out.println("CACHE HIT for Redis key: " + redisKey);
+			return cachedLocation;
+		}
+
+		System.out.println("CACHE MISS for Redis key: " + redisKey);
+		return null;
+	}
 
 	public Object getSlots(String siteID, String customerName, String appointmentType, String startDate) {
 		try {
@@ -1163,26 +1332,11 @@ public class TenBridgeService extends BaseService {
 		}
 	}
 
-	public LocationDTO getLocationFromRedis(String redisKey) {
-		ValueOperations<String, LocationDTO> ops = redisLocationTemplate.opsForValue();
-		System.out.println("REDIS LOCATION KEY: " + redisKey);
-		LocationDTO cachedLocation = ops.get(redisKey);
-		System.out.println("CACHED DATA: " + cachedLocation);
-
-		if (cachedLocation != null) {
-			System.out.println("CACHE HIT for Redis key: " + redisKey);
-			return cachedLocation;
-		}
-
-		System.out.println("CACHE MISS for Redis key: " + redisKey);
-		return null;
-	}
-
 //	public void setToken() {
 //		ClientRegistration clientRegistration = getOauth().clientRegistration();
 //		String token = ts.getToken(clientRegistration);
 //		apiClient.setAccessToken(token);
-////		System.out.println(">>>>>>>>>>>>" + token);
+//		System.out.println(">>>>>>>>>>>>" + token);
 //	}
 
 	public OAuth2Config getOauth() {

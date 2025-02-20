@@ -1,16 +1,28 @@
 package com.ps.tenbridge.datahub.config;
 
+import java.io.IOException;
+import java.time.Duration;
+import java.util.Map;
+
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
+import org.redisson.spring.cache.RedissonSpringCacheManager;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.web.client.RestTemplate;
 
 import com.ps.tenbridge.datahub.dto.LocationDTO;
-import com.ps.tenbridge.datahub.dto.ProviderDTO;
 import com.ps.tenbridge.datahub.dto.SearchPatientApi;
 import com.ps.tenbridge.datahub.utility.SingleLocationsUtil;
 import com.ps.tenbridge.datahub.utility.SinglePractitionersUtil;
@@ -55,14 +67,44 @@ public class OpenApiConfig {
 		return template;
 	}
 
+//	@Bean
+//	public RedisTemplate<String, ProviderDTO> redisPractitionerTemplate() {
+//		RedisTemplate<String, ProviderDTO> template = new RedisTemplate<>();
+//		template.setConnectionFactory(redisConnectionFactory());
+//		template.setKeySerializer(new StringRedisSerializer());
+//		template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+//		return template;
+//	}
+
+//	@Bean
+//	public CacheManager cacheManager() {
+//		return new ConcurrentMapCacheManager("locations", "practitioners");
+//	}
+
+	
+//	WORKING REDIS BEAN WITHOUT HASHING - FINAL 20-02-2025
 	@Bean
-	public RedisTemplate<String, ProviderDTO> redisPractitionerTemplate() {
-		RedisTemplate<String, ProviderDTO> template = new RedisTemplate<>();
-		template.setConnectionFactory(redisConnectionFactory());
-		template.setKeySerializer(new StringRedisSerializer());
-		template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-		return template;
+	public RedisCacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
+		RedisCacheConfiguration cacheConfig = RedisCacheConfiguration.defaultCacheConfig().disableCachingNullValues()
+				.entryTtl(Duration.ofMinutes(10)) // Set TTL for cache entries
+				.computePrefixWith(cacheName -> "") // Ensures visible key prefixes
+				.serializeValuesWith(RedisSerializationContext.SerializationPair
+						.fromSerializer(new GenericJackson2JsonRedisSerializer()));
+
+		return RedisCacheManager.builder(redisConnectionFactory).cacheDefaults(cacheConfig).build();
 	}
+
+
+//	@Bean(name = "cacheManager")
+//	CacheManager cacheManager(RedissonClient redissonClient) {
+//		CacheManager cm = new RedissonSpringCacheManager(redissonClient, "classpath:/cache-config.yaml");
+//		return cm;
+//	}
+//
+//	@Bean
+//	public RedissonClient redissonClient() throws IOException {
+//		return Redisson.create(Config.fromYAML(new ClassPathResource("redisson-config.yaml").getInputStream()));
+//	}
 
 	@Bean
 	public ApiClient apiClient() {

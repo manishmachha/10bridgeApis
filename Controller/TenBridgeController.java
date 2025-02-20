@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
@@ -345,6 +347,20 @@ public class TenBridgeController {
 		}
 	}
 
+	@PostMapping("/bulk-locations")
+	public ResponseEntity<Map<String, LocationDTO>> fetchLocationsInBulk(@RequestBody Map<String, Object> requestBody)
+			throws InterruptedException, ExecutionException {
+		String siteID = (String) requestBody.get("siteID");
+		String customerName = (String) requestBody.get("customerName");
+		List<String> locationIdList = (List<String>) requestBody.get("locationIds");
+
+		// Convert the List of location IDs to a Set
+		Set<String> locationIds = new HashSet<>(locationIdList);
+
+		Map<String, LocationDTO> locations = tenBridgeService.getLocationsInCache(siteID, customerName, locationIds);
+		return ResponseEntity.ok(locations);
+	}
+
 //	@PostMapping("/bulk-locations")
 //	public CompletableFuture<ResponseEntity<Map<String, LocationDTO>>> fetchLocationsInBulk(
 //			@RequestBody Map<String, Object> requestBody) {
@@ -354,26 +370,13 @@ public class TenBridgeController {
 //
 //		// Convert the List of location IDs to a Set
 //		Set<String> locationIds = new HashSet<>(locationIdList);
-//		return tenBridgeService.getLocationsInBulk(siteID, customerName, locationIds)
+//		return tenBridgeService.getLocationsInBulkAsync(siteID, customerName, locationIds)
 //				.thenApply(locations -> ResponseEntity.ok(locations));
 //	}
 
-	@PostMapping("/bulk-locations")
-	public ResponseEntity<Map<String, LocationDTO>> fetchLocationsInBulk(@RequestBody Map<String, Object> requestBody) {
-		String siteID = (String) requestBody.get("siteID");
-		String customerName = (String) requestBody.get("customerName");
-		List<String> locationIdList = (List<String>) requestBody.get("locationIds");
-
-		// Convert the List of location IDs to a Set
-		Set<String> locationIds = new HashSet<>(locationIdList);
-
-		Map<String, LocationDTO> locations = tenBridgeService.getLocationsInBulk(siteID, customerName, locationIds);
-		return ResponseEntity.ok(locations);
-	}
-
 	@PostMapping("/bulk-practitioners")
 	public ResponseEntity<Map<String, ProviderDTO>> fetchPractitionersInBulk(
-			@RequestBody Map<String, Object> requestBody) {
+			@RequestBody Map<String, Object> requestBody) throws InterruptedException, ExecutionException {
 		String siteID = (String) requestBody.get("siteID");
 		String customerName = (String) requestBody.get("customerName");
 		List<String> practitionerIdList = (List<String>) requestBody.get("practitionerIds");
@@ -381,19 +384,9 @@ public class TenBridgeController {
 		// Convert the List of practitioner IDs to a Set
 		Set<String> practitionerIds = new HashSet<>(practitionerIdList);
 
-		Map<String, ProviderDTO> practitioners = tenBridgeService.getPractitionersInBulk(siteID, customerName,
+		Map<String, ProviderDTO> practitioners = tenBridgeService.getPractitionersInCache(siteID, customerName,
 				practitionerIds);
 		return ResponseEntity.ok(practitioners);
-	}
-
-	@GetMapping("location-from-redis/{redisKey}")
-	public ResponseEntity<LocationDTO> getLocation(@PathVariable String redisKey) {
-		LocationDTO locationDTO = tenBridgeService.getLocationFromRedis(redisKey);
-		if (locationDTO != null) {
-			return new ResponseEntity<>(locationDTO, HttpStatus.OK);
-		} else {
-			return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
-		}
 	}
 
 //	@PostMapping("/bulk-practitioners")
@@ -406,9 +399,19 @@ public class TenBridgeController {
 //		// Convert the List of practitioner IDs to a Set
 //		Set<String> practitionerIds = new HashSet<>(practitionerIdList);
 //
-//		return tenBridgeService.getPractitionersInBulk(siteID, customerName, practitionerIds)
+//		return tenBridgeService.getPractitionersInBulkAsync(siteID, customerName, practitionerIds)
 //				.thenApply(practitioners -> ResponseEntity.ok(practitioners));
 //	}
+
+	@GetMapping("location-from-redis/{redisKey}")
+	public ResponseEntity<LocationDTO> getLocation(@PathVariable String redisKey) {
+		LocationDTO locationDTO = tenBridgeService.getLocationFromRedis(redisKey);
+		if (locationDTO != null) {
+			return new ResponseEntity<>(locationDTO, HttpStatus.OK);
+		} else {
+			return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+		}
+	}
 
 	private ResponseEntity<Object> processRequest(Map<String, String> request, List<String> requiredAttributes,
 			String entityName, BiFunction<String, String, Object> serviceCall) {
