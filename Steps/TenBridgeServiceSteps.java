@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,6 +15,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 
 import com.ps.tenbridge.datahub.config.OAuth2Config;
@@ -32,6 +36,8 @@ import com.ps.tenbridge.datahub.dto.RacesDTO;
 import com.ps.tenbridge.datahub.dto.ReferralSourcesDTO;
 import com.ps.tenbridge.datahub.dto.ReferringProviderDTO;
 import com.ps.tenbridge.datahub.dto.SearchPatientApi;
+import com.ps.tenbridge.datahub.dto.SlotInfo;
+import com.ps.tenbridge.datahub.dto.SlotsInfo;
 import com.ps.tenbridge.datahub.dto.patientAlerts;
 import com.ps.tenbridge.datahub.services.authentication.TokenService;
 import com.veradigm.ps.tenbridge.client.ApiClient;
@@ -43,16 +49,16 @@ import com.veradigm.ps.tenbridge.client.api.GetAvailableChangeReasonsApi;
 import com.veradigm.ps.tenbridge.client.api.GetCptValuesApi;
 import com.veradigm.ps.tenbridge.client.api.GetEthnicityValuesApi;
 import com.veradigm.ps.tenbridge.client.api.GetGenderValuesApi;
+import com.veradigm.ps.tenbridge.client.api.GetLocationByIdApi;
 import com.veradigm.ps.tenbridge.client.api.GetPatientAlertsApi;
 import com.veradigm.ps.tenbridge.client.api.GetPayorGroupsApi;
 import com.veradigm.ps.tenbridge.client.api.GetPracticeLocationsApi;
+import com.veradigm.ps.tenbridge.client.api.GetProviderByIdApi;
 import com.veradigm.ps.tenbridge.client.api.GetProviderSlotsApi;
 import com.veradigm.ps.tenbridge.client.api.GetProvidersApi;
 import com.veradigm.ps.tenbridge.client.api.GetRaceValuesApi;
 import com.veradigm.ps.tenbridge.client.api.GetReferralSourcesApi;
 import com.veradigm.ps.tenbridge.client.api.GetReferringProvidersApi;
-import com.veradigm.ps.tenbridge.client.api.GetSingleLocationApi;
-import com.veradigm.ps.tenbridge.client.api.GetSinglePractitionerApi;
 import com.veradigm.ps.tenbridge.client.models.Appointment;
 import com.veradigm.ps.tenbridge.client.models.AppointmentSearchRequest;
 import com.veradigm.ps.tenbridge.client.models.AppointmentSearchRequestData;
@@ -67,6 +73,10 @@ import com.veradigm.ps.tenbridge.client.models.Ethnicity;
 import com.veradigm.ps.tenbridge.client.models.Ethnicity200Response;
 import com.veradigm.ps.tenbridge.client.models.Gender;
 import com.veradigm.ps.tenbridge.client.models.Gender200Response;
+import com.veradigm.ps.tenbridge.client.models.GetLocationById200Response;
+import com.veradigm.ps.tenbridge.client.models.GetLocationByIdRequest;
+import com.veradigm.ps.tenbridge.client.models.GetProviderById200Response;
+import com.veradigm.ps.tenbridge.client.models.GetProviderByIdRequest;
 import com.veradigm.ps.tenbridge.client.models.InsuranceCarrier;
 import com.veradigm.ps.tenbridge.client.models.InsurancePolicy;
 import com.veradigm.ps.tenbridge.client.models.Location;
@@ -82,16 +92,15 @@ import com.veradigm.ps.tenbridge.client.models.PatientRequestData;
 import com.veradigm.ps.tenbridge.client.models.PayorGroups200Response;
 import com.veradigm.ps.tenbridge.client.models.PracticeLocation200Response;
 import com.veradigm.ps.tenbridge.client.models.Practitioner;
+import com.veradigm.ps.tenbridge.client.models.ProviderSlots200Response;
 import com.veradigm.ps.tenbridge.client.models.Providers200Response;
 import com.veradigm.ps.tenbridge.client.models.Race;
 import com.veradigm.ps.tenbridge.client.models.Race200Response;
 import com.veradigm.ps.tenbridge.client.models.ReferralSource200Response;
 import com.veradigm.ps.tenbridge.client.models.ReferralSourcesResponse;
 import com.veradigm.ps.tenbridge.client.models.RequestMetaData;
-import com.veradigm.ps.tenbridge.client.models.SingleLocation200Response;
-import com.veradigm.ps.tenbridge.client.models.SingleLocationRequest;
-import com.veradigm.ps.tenbridge.client.models.SinglePractitioner200Response;
-import com.veradigm.ps.tenbridge.client.models.SinglePractitionerRequest;
+import com.veradigm.ps.tenbridge.client.models.Slot;
+import com.veradigm.ps.tenbridge.client.models.SlotRequest;
 
 import io.cucumber.java.Before;
 import io.cucumber.java.en.And;
@@ -112,6 +121,8 @@ public class TenBridgeServiceSteps {
 	private List<ReferringProviderDTO> ReferringroviderResponse;
 
 	private List<LocationDTO> locationResponse;
+
+	private List<SlotsInfo> slotsResponse;
 
 	private List<InsuranceDTO> insuranceResponse;
 
@@ -205,13 +216,22 @@ public class TenBridgeServiceSteps {
 	private ClientRegistration clientRegistration;
 
 	@Mock
-	private GetSinglePractitionerApi singlePractitionerApi;
+	private GetLocationByIdApi getLocationByIdApi;
 
 	@Mock
-	private GetSingleLocationApi singleLocationApi;
+	private GetProviderByIdApi getProviderByIdApi;
 
 	@Mock
 	private BookAppointmentApi bookAppointmentApi;
+
+	@Mock
+	private CacheManager cacheManager;
+
+	@Mock
+	private Cache providerCache;
+
+	@Mock
+	private Cache locationCache;
 
 	@Before
 	public void setUp() {
@@ -231,7 +251,8 @@ public class TenBridgeServiceSteps {
 		tenBridgeService = new TenBridgeService(apiClient, ts, oauth, providersApi, locationsApi, payorGroupsApi,
 				referringProvidersApi, ethnicityValuesApi, racesApi, referralSourcesApi, patientAlertsApi,
 				genderValuesApi, cptValuesApi, cancelReasonsApi, changeReasonsApi, appontmentsApi, slotsApi,
-				createPatientApi, searchPatientApi, singlePractitionerApi, singleLocationApi, bookAppointmentApi);
+				createPatientApi, searchPatientApi, getProviderByIdApi, getLocationByIdApi, bookAppointmentApi,
+				cacheManager);
 	}
 
 	/*********************************************************************************************************
@@ -254,17 +275,13 @@ public class TenBridgeServiceSteps {
 	public void callGetProvidersWithValidToken(String siteID, String customerName) {
 		Providers200Response mockApiResponse = new Providers200Response();
 		Practitioner practitioner1 = new Practitioner();
-		practitioner1.setFirstName("TestfirstName");
 		practitioner1.setSpeciality("Testspecialty");
 		practitioner1.setAbbreviation("few");
-		practitioner1.setLastName("TestLn");
 		practitioner1.setPractitionerId("10");
 		practitioner1.setIsActive("true");
 		Practitioner practitioner2 = new Practitioner();
-		practitioner2.setFirstName("TestfirstName1");
 		practitioner2.setSpeciality("Testspecialty1");
 		practitioner2.setAbbreviation("fe");
-		practitioner2.setLastName("TestLn1");
 		practitioner2.setPractitionerId("101");
 		practitioner2.setIsActive("true");
 		mockApiResponse.setProviders(List.of(practitioner1, practitioner2));
@@ -281,8 +298,6 @@ public class TenBridgeServiceSteps {
 	@And("each provider should have valid details")
 	public void each_provider_should_have_valid_details() {
 		for (ProviderDTO provider : providerResponse) {
-			assertNotNull(provider.getFirstName(), "Provider's first name should not be null");
-			assertNotNull(provider.getLastName(), "Provider's last name should not be null");
 			assertNotNull(provider.getProviderId(), "Provider's practitioner ID should not be null");
 			assertNotNull(provider.getIs_active(), "Provider's active status should not be null");
 		}
@@ -576,17 +591,13 @@ public class TenBridgeServiceSteps {
 	public void callGetReferringProvidersWithValidToken(String siteID, String customerName) {
 		Providers200Response mockApiResponse = new Providers200Response();
 		Practitioner practitioner1 = new Practitioner();
-		practitioner1.setFirstName("TestfirstName");
 		practitioner1.setSpeciality("Testspecialty");
 		practitioner1.setAbbreviation("few");
-		practitioner1.setLastName("TestLn");
 		practitioner1.setPractitionerId("10");
 		practitioner1.setIsActive("true");
 		Practitioner practitioner2 = new Practitioner();
-		practitioner2.setFirstName("TestfirstName1");
 		practitioner2.setSpeciality("Testspecialty1");
 		practitioner2.setAbbreviation("fe");
-		practitioner2.setLastName("TestLn1");
 		practitioner2.setPractitionerId("101");
 		practitioner2.setIsActive("true");
 		mockApiResponse.setProviders(List.of(practitioner1, practitioner2));
@@ -604,9 +615,7 @@ public class TenBridgeServiceSteps {
 	public void each_ReferringProviders_should_have_valid_details() {
 		for (ReferringProviderDTO referringProvider : ReferringroviderResponse) {
 			assertNotNull(referringProvider.getAbbreviation(), "Referring provider's abbrevation should not be null");
-			assertNotNull(referringProvider.getFirstName(), "Referring provider's first name should not be null");
 			assertNotNull(referringProvider.getIs_active(), "Referring provider's active status should not be null");
-			assertNotNull(referringProvider.getLastName(), "Referring provider's last name should not be null");
 			assertNotNull(referringProvider.getSpecialty(), "Referring provider's speciality should not be null");
 			assertNotNull(referringProvider.getReferringproviderid(),
 					"Referring provider's practitioner id should not be null");
@@ -2080,135 +2089,9 @@ public class TenBridgeServiceSteps {
 
 	@When("I call the getAppointments API with siteID {string} and customerName {string} and patient_id {string} with valid Token")
 	public void callGetAppointmentsWithValidToken(String siteID, String customerName, String patientId) {
-//		Providers200Response mockApiResponse1 = new Providers200Response();
-//		Practitioner practitioner1 = new Practitioner();
-//		practitioner1.setFirstName("TestfirstName");
-//		practitioner1.setSpeciality("Testspecialty");
-//		practitioner1.setAbbreviation("few");
-//		practitioner1.setLastName("TestLn");
-//		practitioner1.setPractitionerId("10");
-//		practitioner1.setIsActive("true");
-//		Practitioner practitioner2 = new Practitioner();
-//		practitioner2.setFirstName("TestfirstName1");
-//		practitioner2.setSpeciality("Testspecialty1");
-//		practitioner2.setAbbreviation("fe");
-//		practitioner2.setLastName("TestLn1");
-//		practitioner2.setPractitionerId("101");
-//		practitioner2.setIsActive("true");
-//		mockApiResponse1.setProviders(List.of(practitioner1, practitioner2));
-//		when(providersApi.providers(Mockito.any())).thenReturn(mockApiResponse1);
-//
-//		PracticeLocation200Response mockApiResponse2 = new PracticeLocation200Response();
-//		Location location1 = new Location();
-//		location1.setLocationId("001");
-//		location1.setLocationName("Head Office");
-//		location1.setLocationType("Corporate");
-//		location1.setAddressLine1("123 Main St");
-//		location1.setAddressLine2("Suite 400");
-//		location1.setState("Telangana");
-//		location1.setCity("Hyderabad");
-//		location1.setZip("500081");
-//		location1.setAbbreviation("HO");
-//		location1.setCountryCode("IN");
-//		location1.setIsActive("true");
-//		Location location2 = new Location();
-//		location2.setLocationId("002");
-//		location2.setLocationName("Branch Office");
-//		location2.setLocationType("Retail");
-//		location2.setAddressLine1("456 Market St");
-//		location2.setAddressLine2("Floor 2");
-//		location2.setState("Karnataka");
-//		location2.setCity("Bangalore");
-//		location2.setZip("560034");
-//		location2.setAbbreviation("BO");
-//		location2.setCountryCode("IN");
-//		location2.setIsActive("false");
-//		mockApiResponse2.setLocations(List.of(location1, location2));
-//		when(locationsApi.practiceLocation(Mockito.any())).thenReturn(mockApiResponse2);
-//
-//		Appointments200Response mockApiResponse = new Appointments200Response();
-//		appointmentSearchRequestData.setPatientId(patientId);
-//		Appointment appointment1 = new Appointment();
-//		appointment1.setAppointmentId("1");
-//		appointment1.setAppointmentStatus("Scheduled");
-//		appointment1.setAppointmentCreatedDate("2025-01-24");
-//		appointment1.setAppointmentBookingDate("2025-01-23");
-//		appointment1.setAppointmentBookedBy("Dr. Smith");
-//		appointment1.setCancellationReason("None");
-//		appointment1.setIcDCode("A123");
-//		appointment1.setAppointmentDate("2025-01-30");
-//		appointment1.setAppointmentDuration(30);
-//		appointment1.setAppointmentDateTime("2025-01-30 10:00");
-//		appointment1.setAppointmentType("Consultation");
-//		appointment1.setCoverageType("Insurance");
-//		appointment1.setVisitType("In-Person");
-//		appointment1.setAppointmentStartTime("10:00");
-//		appointment1.setAppointmentEndTime("10:30");
-//		appointment1.setScheduledLocationId("Location1");
-//		appointment1.setScheduledProviderId("Provider1");
-//		appointment1.setScheduledDepartment("Cardiology");
-//		appointment1.setReferringProviderId("Provider2");
-//		appointment1.setPatientIdentifier("Patient1");
-//		appointment1.setNotesOrComments("First appointment");
-//
-//		// Creating second dummy appointment object
-//		Appointment appointment2 = new Appointment();
-//		appointment2.setAppointmentId("2");
-//		appointment2.setAppointmentStatus("Cancelled");
-//		appointment2.setAppointmentCreatedDate("2025-01-25");
-//		appointment2.setAppointmentBookingDate("2025-01-24");
-//		appointment2.setAppointmentBookedBy("Dr. Johnson");
-//		appointment2.setCancellationReason("Patient request");
-//		appointment2.setIcDCode("B456");
-//		appointment2.setAppointmentDate("2025-01-31");
-//		appointment2.setAppointmentDuration(45);
-//		appointment2.setAppointmentDateTime("2025-01-31 11:00");
-//		appointment2.setAppointmentType("Follow-up");
-//		appointment2.setCoverageType("Self-pay");
-//		appointment2.setVisitType("Telehealth");
-//		appointment2.setAppointmentStartTime("11:00");
-//		appointment2.setAppointmentEndTime("11:45");
-//		appointment2.setScheduledLocationId("Location2");
-//		appointment2.setScheduledProviderId("Provider3");
-//		appointment2.setScheduledDepartment("Orthopedics");
-//		appointment2.setReferringProviderId("Provider4");
-//		appointment2.setPatientIdentifier("Patient2");
-//		appointment2.setNotesOrComments("Cancelled by patient");
-//		mockApiResponse.appointments(List.of(appointment1, appointment2));
-//		when(appontmentsApi.appointments(Mockito.any())).thenReturn(mockApiResponse);
-//
-//		meta.setSiteID(siteID);
-//		meta.setCustomerName(customerName);
-//		appointmentsResponse = List.of(appointment1, appointment2);
 
-		SinglePractitioner200Response mockApiResponse1 = new SinglePractitioner200Response();
-		Practitioner practitioner1 = new Practitioner();
-		practitioner1.setFirstName("TestfirstName");
-		practitioner1.setSpeciality("Testspecialty");
-		practitioner1.setAbbreviation("few");
-		practitioner1.setLastName("TestLn");
-		practitioner1.setPractitionerId("10");
-		practitioner1.setIsActive("true");
-		mockApiResponse1.setProviders(List.of(practitioner1));
-		when(singlePractitionerApi.singlePractitioner(Mockito.any())).thenReturn(mockApiResponse1);
-
-		SingleLocation200Response mockApiResponse2 = new SingleLocation200Response();
-		Location location1 = new Location();
-		location1.setLocationId("001");
-		location1.setLocationName("Head Office");
-		location1.setLocationType("Corporate");
-		location1.setAddressLine1("123 Main St");
-		location1.setAddressLine2("Suite 400");
-		location1.setState("Telangana");
-		location1.setCity("Hyderabad");
-		location1.setZip("500081");
-		location1.setAbbreviation("HO");
-		location1.setCountryCode("IN");
-		location1.setIsActive("true");
-		mockApiResponse2.setLocations(List.of(location1));
-		when(singleLocationApi.singleLocation(Mockito.any())).thenReturn(mockApiResponse2);
-
-		List<AppointmentInfoDTO> mockApiResponse = new ArrayList<AppointmentInfoDTO>();
+		Appointments200Response mockApiResponse = new Appointments200Response();
+		appointmentSearchRequestData.setPatientId(patientId);
 
 		Appointment appointment1 = new Appointment();
 		appointment1.setAppointmentId("1");
@@ -2232,8 +2115,34 @@ public class TenBridgeServiceSteps {
 		appointment1.setReferringProviderId("Provider2");
 		appointment1.setPatientIdentifier("Patient1");
 		appointment1.setNotesOrComments("First appointment");
-		appointment1.setRequestedAppointmentId("6a4g6ar");
-		when(bookAppointmentApi.bookAppointment(Mockito.any())).thenReturn(appointment1);
+		when(appontmentsApi.appointments(Mockito.any())).thenReturn(mockApiResponse);
+
+		GetProviderById200Response mockApiResponse1 = new GetProviderById200Response();
+		Practitioner practitioner1 = new Practitioner();
+		practitioner1.setSpeciality("Testspecialty");
+		practitioner1.setAbbreviation("few");
+		practitioner1.setPractitionerId("10");
+		practitioner1.setIsActive("true");
+		mockApiResponse1.setProviders(List.of(practitioner1));
+		when(getProviderByIdApi.getProviderById(Mockito.any())).thenReturn(mockApiResponse1);
+
+		GetLocationById200Response mockApiResponse2 = new GetLocationById200Response();
+		Location location1 = new Location();
+		location1.setLocationId("001");
+		location1.setLocationName("Head Office");
+		location1.setLocationType("Corporate");
+		location1.setAddressLine1("123 Main St");
+		location1.setAddressLine2("Suite 400");
+		location1.setState("Telangana");
+		location1.setCity("Hyderabad");
+		location1.setZip("500081");
+		location1.setAbbreviation("HO");
+		location1.setCountryCode("IN");
+		location1.setIsActive("true");
+		mockApiResponse2.setLocations(List.of(location1));
+		when(getLocationByIdApi.getLocationById(Mockito.any())).thenReturn(mockApiResponse2);
+
+		List<AppointmentInfoDTO> mockApiResponsex = new ArrayList<AppointmentInfoDTO>();
 
 		AppointmentInfoDTO appointment = new AppointmentInfoDTO();
 		appointment.setAppointmentId("A123");
@@ -2251,7 +2160,7 @@ public class TenBridgeServiceSteps {
 		appointment.setChiefComplaintCommentsInfo("Observing for symptoms");
 		appointment.setStatus("Scheduled");
 		appointment.setPastAppointment(false);
-		mockApiResponse.add(appointment);
+		mockApiResponsex.add(appointment);
 
 		meta.setSiteID(siteID);
 		meta.setCustomerName(customerName);
@@ -2266,29 +2175,6 @@ public class TenBridgeServiceSteps {
 
 	@And("each Appointment should have valid details")
 	public void each_Appointment_should_have_valid_details() {
-//		for (Appointment appointment : appointmentsResponse) {
-//			assertNotNull(appointment.getAppointmentId(), "AppointmentId should not be null");
-//			assertNotNull(appointment.getAppointmentStatus(), "AppointmentStatus should not be null");
-//			assertNotNull(appointment.getAppointmentCreatedDate(), "AppointmentCreatedDate should not be null");
-//			assertNotNull(appointment.getAppointmentBookingDate(), "AppointmentBookingDate should not be null");
-//			assertNotNull(appointment.getAppointmentBookedBy(), "AppointmentBookedBy should not be null");
-//			assertNotNull(appointment.getCancellationReason(), "CancellationReason should not be null");
-//			assertNotNull(appointment.getIcDCode(), "IcDCode should not be null");
-//			assertNotNull(appointment.getAppointmentDate(), "AppointmentDate should not be null");
-//			assertNotNull(appointment.getAppointmentDuration(), "AppointmentDuration should not be null");
-//			assertNotNull(appointment.getAppointmentDateTime(), "AppointmentDateTime should not be null");
-//			assertNotNull(appointment.getAppointmentType(), "AppointmentType should not be null");
-//			assertNotNull(appointment.getCoverageType(), "CoverageType should not be null");
-//			assertNotNull(appointment.getVisitType(), "VisitType should not be null");
-//			assertNotNull(appointment.getAppointmentStartTime(), "AppointmentStartTime should not be null");
-//			assertNotNull(appointment.getAppointmentEndTime(), "AppointmentEndTime should not be null");
-//			assertNotNull(appointment.getScheduledLocationId(), "ScheduledLocationId should not be null");
-//			assertNotNull(appointment.getScheduledProviderId(), "ScheduledProviderId should not be null");
-//			assertNotNull(appointment.getScheduledDepartment(), "ScheduledDepartment should not be null");
-//			assertNotNull(appointment.getReferringProviderId(), "ReferringProviderId should not be null");
-//			assertNotNull(appointment.getPatientIdentifier(), "PatientIdentifier should not be null");
-//			assertNotNull(appointment.getNotesOrComments(), "NotesOrComments should not be null");
-//		}
 
 		for (Appointment appointment : appointmentsResponse) {
 			assertNotNull(appointment.getAppointmentId(), "AppointmentId should not be null");
@@ -2298,7 +2184,6 @@ public class TenBridgeServiceSteps {
 			assertNotNull(appointment.getAppointmentBookedBy(), "AppointmentBookedBy should not be null");
 			assertNotNull(appointment.getCancellationReason(), "CancellationReason should not be null");
 			assertNotNull(appointment.getIcDCode(), "IcDCode should not be null");
-			assertNotNull(appointment.getRequestedAppointmentId(), "RequestedAppointmentId should not be null");
 			assertNotNull(appointment.getAppointmentDate(), "AppointmentDate should not be null");
 			assertNotNull(appointment.getAppointmentDuration(), "AppointmentDuration should not be null");
 			assertNotNull(appointment.getAppointmentDateTime(), "AppointmentDateTime should not be null");
@@ -2358,18 +2243,23 @@ public class TenBridgeServiceSteps {
 
 	@When("I call the getAppointments API with invalid Token")
 	public void callGetAppointmentsWithInvalidToken() {
-		when(singlePractitionerApi.singlePractitioner(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
-		when(singleLocationApi.singleLocation(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
+
+		when(cacheManager.getCache("providerCache")).thenReturn(providerCache);
+		when(cacheManager.getCache("locationCache")).thenReturn(locationCache);
+
+		when(getProviderByIdApi.getProviderById(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
+		when(getLocationByIdApi.getLocationById(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
 		when(appontmentsApi.appointments(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
 
 		exception = null;
 		try {
-			tenBridgeService.getSingleLocation(meta.getSiteID(), meta.getCustomerName(), "10");
-			tenBridgeService.getSinglePractitioner(meta.getSiteID(), meta.getCustomerName(), "1003");
+			tenBridgeService.getLocationById(meta.getSiteID(), meta.getCustomerName(), "10");
+			tenBridgeService.getProviderDetailsById(meta.getSiteID(), meta.getCustomerName(), "1003");
 			tenBridgeService.getAppointment(meta.getSiteID(), meta.getCustomerName(),
 					appointmentSearchRequestData.getPatientId());
 		} catch (Exception e) {
 			exception = e;
+			System.out.println("EEEEEEE : " + e);
 		}
 	}
 
@@ -2404,14 +2294,18 @@ public class TenBridgeServiceSteps {
 
 	@When("the getAppointments API returns an empty list")
 	public void getAppointmentsApiReturnsEmptyList() {
-		SinglePractitioner200Response mockApiResponse1 = new SinglePractitioner200Response();
-		mockApiResponse1.setProviders(List.of()); // Simulate empty list
-		when(singlePractitionerApi.singlePractitioner(Mockito.any(SinglePractitionerRequest.class)))
-				.thenReturn(mockApiResponse1);
 
-		SingleLocation200Response mockApiResponse2 = new SingleLocation200Response();
+		when(cacheManager.getCache("providerCache")).thenReturn(providerCache);
+		when(cacheManager.getCache("locationCache")).thenReturn(locationCache);
+
+		GetProviderById200Response mockApiResponse1 = new GetProviderById200Response();
+		mockApiResponse1.setProviders(List.of()); // Simulate empty list
+		when(getProviderByIdApi.getProviderById(Mockito.any(GetProviderByIdRequest.class)))
+				.thenReturn(mockApiResponse1);
+		GetLocationById200Response mockApiResponse2 = new GetLocationById200Response();
 		mockApiResponse2.setLocations(List.of()); // Simulate empty list
-		when(singleLocationApi.singleLocation(Mockito.any(SingleLocationRequest.class))).thenReturn(mockApiResponse2);
+		when(getLocationByIdApi.getLocationById(Mockito.any(GetLocationByIdRequest.class)))
+				.thenReturn(mockApiResponse2);
 
 		Appointments200Response mockApiResponse = new Appointments200Response();
 		mockApiResponse.setAppointments(List.of()); // Simulate empty list
@@ -2419,8 +2313,8 @@ public class TenBridgeServiceSteps {
 
 		exception = null;
 		try {
-			tenBridgeService.getSingleLocation(meta.getSiteID(), meta.getCustomerName(), "10");
-			tenBridgeService.getSinglePractitioner(meta.getSiteID(), meta.getCustomerName(), "1003");
+			tenBridgeService.getLocationById(meta.getSiteID(), meta.getCustomerName(), "10");
+			tenBridgeService.getProviderDetailsById(meta.getSiteID(), meta.getCustomerName(), "1003");
 			tenBridgeService.getAppointment(meta.getSiteID(), meta.getCustomerName(),
 					appointmentSearchRequestData.getPatientId());
 		} catch (Exception e) {
@@ -2459,23 +2353,19 @@ public class TenBridgeServiceSteps {
 	public void callGetPatientsWithValidToken(String siteID, String customerName, String first_name, String last_name,
 			String date_of_birth) {
 
-		SinglePractitioner200Response mockApiResponse1 = new SinglePractitioner200Response();
+		GetProviderById200Response mockApiResponse1 = new GetProviderById200Response();
 		Practitioner practitioner1 = new Practitioner();
-		practitioner1.setFirstName("TestfirstName");
 		practitioner1.setSpeciality("Testspecialty");
 		practitioner1.setAbbreviation("few");
-		practitioner1.setLastName("TestLn");
 		practitioner1.setPractitionerId("10");
 		practitioner1.setIsActive("true");
 		Practitioner practitioner2 = new Practitioner();
-		practitioner2.setFirstName("TestfirstName1");
 		practitioner2.setSpeciality("Testspecialty1");
 		practitioner2.setAbbreviation("fe");
-		practitioner2.setLastName("TestLn1");
 		practitioner2.setPractitionerId("101");
 		practitioner2.setIsActive("true");
 		mockApiResponse1.setProviders(List.of(practitioner1, practitioner2));
-		when(singlePractitionerApi.singlePractitioner(Mockito.any())).thenReturn(mockApiResponse1);
+		when(getProviderByIdApi.getProviderById(Mockito.any())).thenReturn(mockApiResponse1);
 
 		List<PatientInfoDTO> mockApiResponse = new ArrayList<PatientInfoDTO>();
 		// Dummy Object 1
@@ -2500,7 +2390,7 @@ public class TenBridgeServiceSteps {
 		// Dummy Object 1
 		Patient object_1 = new Patient();
 		object_1.setPatientProfileID("P12345");
-		object_1.setPractitionerId(101);
+		object_1.setPractitionerId("101");
 		object_1.setInsurances(new ArrayList<InsurancePolicy>());
 		object_1.setFirstName("John");
 		object_1.setLastName("Doe");
@@ -2855,18 +2745,16 @@ public class TenBridgeServiceSteps {
 	public void callBookAppointmentWithValidToken(String siteID, String customerName, String requested_appointment_id,
 			String patient_identifier) {
 
-		SinglePractitioner200Response mockApiResponse1 = new SinglePractitioner200Response();
+		GetProviderById200Response mockApiResponse1 = new GetProviderById200Response();
 		Practitioner practitioner1 = new Practitioner();
-		practitioner1.setFirstName("TestfirstName");
 		practitioner1.setSpeciality("Testspecialty");
 		practitioner1.setAbbreviation("few");
-		practitioner1.setLastName("TestLn");
 		practitioner1.setPractitionerId("10");
 		practitioner1.setIsActive("true");
 		mockApiResponse1.setProviders(List.of(practitioner1));
-		when(singlePractitionerApi.singlePractitioner(Mockito.any())).thenReturn(mockApiResponse1);
+		when(getProviderByIdApi.getProviderById(Mockito.any())).thenReturn(mockApiResponse1);
 
-		SingleLocation200Response mockApiResponse2 = new SingleLocation200Response();
+		GetLocationById200Response mockApiResponse2 = new GetLocationById200Response();
 		Location location1 = new Location();
 		location1.setLocationId("001");
 		location1.setLocationName("Head Office");
@@ -2880,7 +2768,7 @@ public class TenBridgeServiceSteps {
 		location1.setCountryCode("IN");
 		location1.setIsActive("true");
 		mockApiResponse2.setLocations(List.of(location1));
-		when(singleLocationApi.singleLocation(Mockito.any())).thenReturn(mockApiResponse2);
+		when(getLocationByIdApi.getLocationById(Mockito.any())).thenReturn(mockApiResponse2);
 
 		List<AppointmentInfoDTO> mockApiResponse = new ArrayList<AppointmentInfoDTO>();
 
@@ -3000,14 +2888,17 @@ public class TenBridgeServiceSteps {
 
 	@When("I call the BookAppointment API with invalid Token")
 	public void callBookAppointmentWithInvalidToken() {
-		when(singlePractitionerApi.singlePractitioner(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
-		when(singleLocationApi.singleLocation(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
+		when(cacheManager.getCache("providerCache")).thenReturn(providerCache);
+		when(cacheManager.getCache("locationCache")).thenReturn(locationCache);
+
+		when(getProviderByIdApi.getProviderById(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
+		when(getLocationByIdApi.getLocationById(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
 		when(bookAppointmentApi.bookAppointment(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
 
 		exception = null;
 		try {
-			tenBridgeService.getSinglePractitioner(meta.getSiteID(), meta.getCustomerName(), null);
-			tenBridgeService.getSingleLocation(meta.getSiteID(), meta.getCustomerName(), null);
+			tenBridgeService.getProviderDetailsById(meta.getSiteID(), meta.getCustomerName(), null);
+			tenBridgeService.getLocationById(meta.getSiteID(), meta.getCustomerName(), null);
 			tenBridgeService.bookAppointment(null, null, null, 0, null, null, null, null, null, null, null, null, null,
 					null, null, null, null, null, null, null, null);
 		} catch (Exception e) {
@@ -3048,14 +2939,19 @@ public class TenBridgeServiceSteps {
 
 	@When("the BookAppointment API returns an empty list")
 	public void BookAppointmentApiReturnsEmptyList() {
-		SinglePractitioner200Response mockApiResponse1 = new SinglePractitioner200Response();
+
+		when(cacheManager.getCache("providerCache")).thenReturn(providerCache);
+		when(cacheManager.getCache("locationCache")).thenReturn(locationCache);
+
+		GetProviderById200Response mockApiResponse1 = new GetProviderById200Response();
 		mockApiResponse1.setProviders(List.of()); // Simulate empty list
-		when(singlePractitionerApi.singlePractitioner(Mockito.any(SinglePractitionerRequest.class)))
+		when(getProviderByIdApi.getProviderById(Mockito.any(GetProviderByIdRequest.class)))
 				.thenReturn(mockApiResponse1);
 
-		SingleLocation200Response mockApiResponse2 = new SingleLocation200Response();
+		GetLocationById200Response mockApiResponse2 = new GetLocationById200Response();
 		mockApiResponse2.setLocations(List.of()); // Simulate empty list
-		when(singleLocationApi.singleLocation(Mockito.any(SingleLocationRequest.class))).thenReturn(mockApiResponse2);
+		when(getLocationByIdApi.getLocationById(Mockito.any(GetLocationByIdRequest.class)))
+				.thenReturn(mockApiResponse2);
 
 		Appointment mockApiResponse = new Appointment();
 		mockApiResponse.setAppointmentId(null);
@@ -3063,8 +2959,8 @@ public class TenBridgeServiceSteps {
 
 		exception = null;
 		try {
-			tenBridgeService.getSingleLocation(meta.getSiteID(), meta.getCustomerName(), "10");
-			tenBridgeService.getSinglePractitioner(meta.getSiteID(), meta.getCustomerName(), "1003");
+			tenBridgeService.getLocationById(meta.getSiteID(), meta.getCustomerName(), "10");
+			tenBridgeService.getProviderDetailsById(meta.getSiteID(), meta.getCustomerName(), "1003");
 			tenBridgeService.bookAppointment("621", "OpargoEpicTest", "2024-12-13", 0, "0", "2024-12-13T17:28:55.793Z",
 					"string", "string", "string", "string", "string", "string", "2024-12-13T17:28:55.793Z",
 					"2024-12-13T17:28:55.793Z", "string", "string", "string", "string", "xyz",
@@ -3083,5 +2979,161 @@ public class TenBridgeServiceSteps {
 						|| exception.getMessage().contains("Empty Appointments list")
 						|| exception.getMessage().contains("Invalid data received"),
 				"Exception message should indicate Empty Appointment error: " + exception.getMessage());
+	}
+
+	/*********************************************************************************************************
+	 * Slots Test cases
+	 *********************************************************************************************************/
+
+	@Given("the TenBridgeService is initialized with a valid token For getSlots")
+	public void initializeWithVvalidTokenForgetSlots() {
+		// Ensure tenBridgeService is properly instantiated
+		assertNotNull(tenBridgeService, "TenBridgeService should be instantiated");
+
+		// Initialize the token (simulate the behavior)
+		tenBridgeService.setToken();
+
+		// Assert that the token has been set properly
+		assertNotNull(tenBridgeService.getOauth(), "OAuth2Config should not be null after setting token");
+	}
+
+	@When("I call the getSlots API with siteID {string} and customerName {string} and appointmentType {string} and startDate {string} with valid Token")
+	public void callgetSlotsWithValidToken(String siteID, String customerName, String appointmentType,
+			String startDate) {
+		ProviderSlots200Response mockApiResponse = new ProviderSlots200Response();
+		Slot slot = new Slot();
+		slot.setSlotId("slotId");
+		slot.setServiceCategory("General");
+		slot.setServiceType("Consultation");
+		slot.setSpeciality("Dermatology");
+		slot.setEligibleAppointmentTypes(new ArrayList<>()); // You may add AppointmentType objects to this list
+		slot.setStatus("Available");
+		slot.setAvailabilityDate(LocalDate.now());
+		slot.setStartTime(OffsetDateTime.now());
+		slot.setEndTime(OffsetDateTime.now().plusHours(1));
+		slot.setOverBooked(false);
+		slot.setComments("No comments");
+		slot.setSchedule("Weekdays");
+		slot.setSchedulingDepartment("Main Department");
+		slot.setProviderResource(new Practitioner()); // Create and set a Practitioner object
+		slot.setLocationResource(new Location());
+		mockApiResponse.setSlots(List.of(slot));
+
+		when(slotsApi.providerSlots(Mockito.any())).thenReturn(mockApiResponse);
+		slotsResponse = tenBridgeService.getSlots(siteID, customerName, customerName, startDate);
+	}
+
+	@Then("I should receive a list of slots")
+	public void verifySlotsResponse() {
+		assertNotNull(slotsResponse, "Slot response should not be null");
+		assertFalse(slotsResponse.isEmpty(), "Slot list should not be empty");
+	}
+
+	@And("each slot should have valid details")
+	public void each_slot_should_have_valid_details() {
+		for (SlotsInfo slot : slotsResponse) {
+			        assertNotNull(slot.getSlotId(), "Slot ID should not be null");
+			        assertNotNull(slot.getAppointmentType(), "Slot appointment type should not be null");
+			        assertNotNull(slot.getStartDateTime(), "Slot start time should not be null");
+			        assertNotNull(slot.getEndDateTime(), "Slot end time  should not be null");
+		}
+	}
+
+	@Given("the TenBridgeService is initialized For getSlots")
+	public void initializeTenBridgeServiceForgetSlots() {
+		// Initialize TenBridgeService as shown in the setUp method
+		setUp(); // Ensure this is correctly initializing tenBridgeService
+	}
+
+	@When("the getSlots API is called and the API returns an error status")
+	public void getslotsApiReturnsErrorStatus() {
+		Mockito.mock(RequestMetaData.class);
+		when(slotsApi.providerSlots(Mockito.any(SlotRequest.class))).thenThrow(new RuntimeException("API error"));
+
+		exception = null;
+		try {
+			tenBridgeService.getSlots("621", "OpargoEpicTest", "Office Visit", "2024-12-09T13:00:00Z");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged For getSlots")
+	public void verifyErrorMessageLoggedForgetSlots() {
+		assertNotNull(exception, "Exception should be thrown when API returns an error status");
+		assertTrue(exception.getMessage().contains("Error occurred while retrieving Slots"),
+				"Exception message should indicate the API error");
+	}
+
+	@Given("the TenBridgeService is initialized with an invalid token For getSlots")
+	public void initializeWithInvalidTokenForgetSlots() {
+		// Ensure tenBridgeService is properly instantiated
+		assertNotNull(tenBridgeService, "TenBridgeService should be instantiated");
+
+		// Initialize the token (simulate the behavior)
+		tenBridgeService.setToken();
+
+		// Assert that the token has been set properly
+		assertNotNull(tenBridgeService.getOauth(), "OAuth2Config should not be null after setting token");
+	}
+
+	@When("I call the getSlots API with invalid Token")
+	public void callgetSlotsWithInvalidToken() {
+		when(slotsApi.providerSlots(Mockito.any())).thenThrow(new RuntimeException("Unauthorized"));
+
+		exception = null;
+		try {
+			tenBridgeService.getSlots("621", "OpargoEpicTest", "Office Visit", "2024-12-09T13:00:00Z");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("the API call should fail with an unauthorized error For getSlots")
+	public void verifyUnauthorizedErrorForgetSlots() {
+		assertNotNull(exception, "Exception should be thrown when API returns an unauthorized error");
+		assertTrue(exception.getMessage().contains("Unauthorized"),
+				"Exception message should indicate unauthorized error");
+	}
+
+	@When("the getSlots API receives invalid data for response building")
+	public void getslotsApiReceivesInvalidDataForResponseBuilding() {
+		ProviderSlots200Response mockApiResponse = Mockito.mock(ProviderSlots200Response.class);
+		when(mockApiResponse.getSlots()).thenReturn(null); // Simulate invalid data
+		when(slotsApi.providerSlots(Mockito.any(SlotRequest.class))).thenReturn(mockApiResponse);
+
+		exception = null;
+		try {
+			tenBridgeService.getSlots("621", "OpargoEpicTest", "Office Visit", "2024-12-09T13:00:00Z");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("an appropriate exception or error message should be logged at response For getSlots")
+	public void verifyInvalidDataErrorMessageLoggedForgetSlots() {
+		assertNotNull(exception, "Exception should be thrown when building response with invalid data");
+		assertTrue(exception.getMessage().contains("Invalid data received"),
+				"Exception message should indicate response building error: " + exception.getMessage());
+	}
+
+	@When("the getSlots API returns an empty list")
+	public void getslotsApiReturnsEmptyList() {
+		ProviderSlots200Response mockApiResponse = Mockito.mock(ProviderSlots200Response.class);
+		mockApiResponse.setSlots(List.of()); // Simulate empty list
+		when(slotsApi.providerSlots(Mockito.any(SlotRequest.class))).thenReturn(mockApiResponse);
+
+		exception = null;
+		try {
+			slotsResponse = tenBridgeService.getSlots("621", "OpargoEpicTest", "Office Visit", "2024-12-09T13:00:00Z");
+		} catch (Exception e) {
+			exception = e;
+		}
+	}
+
+	@Then("response should be empty for getSlots")
+	public void verifyEmptyListErrorMessageLoggedForgetSlots() {
+		assertNotNull(slotsResponse, "Response should be empty for getSlots when API returns an empty list");
+		assertTrue(slotsResponse.isEmpty(), "slotsResponse should be empty: " + slotsResponse);
 	}
 }

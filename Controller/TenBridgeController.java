@@ -251,41 +251,6 @@ public class TenBridgeController {
 		}
 	}
 
-	@PostMapping("/single-location")
-	public ResponseEntity<Object> getSingleLocation(@RequestBody Map<String, String> request) {
-		try {
-			if (request.get("siteID") == null || request.get("siteID").isEmpty() || request.get("customerName") == null
-					|| request.get("customerName").isEmpty() || request.get("Location_id") == null
-					|| request.get("Location_id").isEmpty()) {
-				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
-			}
-			Object location = tenBridgeService.getSingleLocation(request.get("siteID"), request.get("customerName"),
-					request.get("Location_id"));
-			return new ResponseEntity<>(location, HttpStatus.OK);
-		} catch (Exception e) {
-			logger.error("Error occurred while retrieving location", e);
-			return new ResponseEntity<>("Error occurred while retrieving location", HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-	}
-
-	@PostMapping("/single-practitioner")
-	public ResponseEntity<Object> getSinglePractitioner(@RequestBody Map<String, String> request) {
-		try {
-			if (request.get("siteID") == null || request.get("siteID").isEmpty() || request.get("customerName") == null
-					|| request.get("customerName").isEmpty() || request.get("Practitioner_id") == null
-					|| request.get("Practitioner_id").isEmpty()) {
-				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
-			}
-			Object practitioner = tenBridgeService.getSinglePractitioner(request.get("siteID"),
-					request.get("customerName"), request.get("Practitioner_id"));
-			return new ResponseEntity<>(practitioner, HttpStatus.OK);
-		} catch (Exception e) {
-			logger.error("Error occurred while retrieving practitioner", e);
-			return new ResponseEntity<>("Error occurred while retrieving practitioner",
-					HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-	}
-
 	@PostMapping("/cancel-appointment")
 	public ResponseEntity<Object> cancelAppointment(@RequestBody Map<String, String> request) {
 		try {
@@ -347,19 +312,19 @@ public class TenBridgeController {
 		}
 	}
 
-	@PostMapping("/bulk-locations")
-	public ResponseEntity<Map<String, LocationDTO>> fetchLocationsInBulk(@RequestBody Map<String, Object> requestBody)
-			throws InterruptedException, ExecutionException {
-		String siteID = (String) requestBody.get("siteID");
-		String customerName = (String) requestBody.get("customerName");
-		List<String> locationIdList = (List<String>) requestBody.get("locationIds");
-
-		// Convert the List of location IDs to a Set
-		Set<String> locationIds = new HashSet<>(locationIdList);
-
-		Map<String, LocationDTO> locations = tenBridgeService.getLocationsInCache(siteID, customerName, locationIds);
-		return ResponseEntity.ok(locations);
-	}
+//	@PostMapping("/bulk-locations")
+//	public ResponseEntity<Map<String, LocationDTO>> fetchLocationsInBulk(@RequestBody Map<String, Object> requestBody)
+//			throws InterruptedException, ExecutionException {
+//		String siteID = (String) requestBody.get("siteID");
+//		String customerName = (String) requestBody.get("customerName");
+//		List<String> locationIdList = (List<String>) requestBody.get("locationIds");
+//
+//		// Convert the List of location IDs to a Set
+//		Set<String> locationIds = new HashSet<>(locationIdList);
+//
+//		Map<String, LocationDTO> locations = tenBridgeService.getLocationsInCache(siteID, customerName, locationIds);
+//		return ResponseEntity.ok(locations);
+//	}
 
 //	@PostMapping("/bulk-locations")
 //	public CompletableFuture<ResponseEntity<Map<String, LocationDTO>>> fetchLocationsInBulk(
@@ -374,20 +339,20 @@ public class TenBridgeController {
 //				.thenApply(locations -> ResponseEntity.ok(locations));
 //	}
 
-	@PostMapping("/bulk-practitioners")
-	public ResponseEntity<Map<String, ProviderDTO>> fetchPractitionersInBulk(
-			@RequestBody Map<String, Object> requestBody) throws InterruptedException, ExecutionException {
-		String siteID = (String) requestBody.get("siteID");
-		String customerName = (String) requestBody.get("customerName");
-		List<String> practitionerIdList = (List<String>) requestBody.get("practitionerIds");
-
-		// Convert the List of practitioner IDs to a Set
-		Set<String> practitionerIds = new HashSet<>(practitionerIdList);
-
-		Map<String, ProviderDTO> practitioners = tenBridgeService.getPractitionersInCache(siteID, customerName,
-				practitionerIds);
-		return ResponseEntity.ok(practitioners);
-	}
+//	@PostMapping("/bulk-practitioners")
+//	public ResponseEntity<Map<String, ProviderDTO>> fetchPractitionersInBulk(
+//			@RequestBody Map<String, Object> requestBody) throws InterruptedException, ExecutionException {
+//		String siteID = (String) requestBody.get("siteID");
+//		String customerName = (String) requestBody.get("customerName");
+//		List<String> practitionerIdList = (List<String>) requestBody.get("practitionerIds");
+//
+//		// Convert the List of practitioner IDs to a Set
+//		Set<String> practitionerIds = new HashSet<>(practitionerIdList);
+//
+//		Map<String, ProviderDTO> practitioners = tenBridgeService.getPractitionersInCache(siteID, customerName,
+//				practitionerIds);
+//		return ResponseEntity.ok(practitioners);
+//	}
 
 //	@PostMapping("/bulk-practitioners")
 //	public CompletableFuture<ResponseEntity<Map<String, ProviderDTO>>> fetchPractitionersInBulk(
@@ -403,15 +368,15 @@ public class TenBridgeController {
 //				.thenApply(practitioners -> ResponseEntity.ok(practitioners));
 //	}
 
-	@GetMapping("location-from-redis/{redisKey}")
-	public ResponseEntity<LocationDTO> getLocation(@PathVariable String redisKey) {
-		LocationDTO locationDTO = tenBridgeService.getLocationFromRedis(redisKey);
-		if (locationDTO != null) {
-			return new ResponseEntity<>(locationDTO, HttpStatus.OK);
-		} else {
-			return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
-		}
-	}
+//	@GetMapping("location-from-redis/{redisKey}")
+//	public ResponseEntity<LocationDTO> getLocation(@PathVariable String redisKey) {
+//		LocationDTO locationDTO = tenBridgeService.getLocationFromRedis(redisKey);
+//		if (locationDTO != null) {
+//			return new ResponseEntity<>(locationDTO, HttpStatus.OK);
+//		} else {
+//			return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+//		}
+//	}
 
 	private ResponseEntity<Object> processRequest(Map<String, String> request, List<String> requiredAttributes,
 			String entityName, BiFunction<String, String, Object> serviceCall) {

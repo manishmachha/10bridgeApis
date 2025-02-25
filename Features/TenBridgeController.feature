@@ -377,3 +377,34 @@ Feature: Ten Bridge Controller Scenarios
     When the client requests BookAppointment
     Then the response status should be 500
     And the response body should contain "Error occurred while creating appointment"
+    
+    Scenario: Successfully retrieve Slots
+    Given a request with valid attributes for Slots
+      | key           | value                           |
+      | siteID        | 621                             |
+      | customerName  | OpargoEpicTest                  |
+      | appointmentType  | Office Visit                |
+      | startDate    | 2024-12-09T13:00:00Z            |
+    When the client requests Slots
+    Then the response status should be 200
+    And the response body should contain "Slots"
+
+   Scenario: Missing required attributes in the request for Slots
+    Given a request with missing attributes
+      | customerName |
+      | OpargoEpicTest |
+    When the client requests Slots
+    Then the response status should be 400
+    And the response body should contain "Invalid request: required fields missing"
+
+  Scenario: Error occurred during Slots call
+   Given a request with valid attributes for Slots
+      | key           | value                           |
+      | siteID        | 621                             |
+      | customerName  | OpargoEpicTest                  |
+      | appointmentType  | Office Visit                |
+      | startDate    | 2024-12-09T13:00:00Z            |
+    And the service throws an exception when calling Slots
+    When the client requests Slots
+    Then the response status should be 500
+    And the response body should contain "Error occurred while retrieving slots"

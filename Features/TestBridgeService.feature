@@ -449,3 +449,31 @@ Feature: Ten Bridge Service Scenarios
     Given the TenBridgeService is initialized For BookAppointment
     When the BookAppointment API returns an empty list
     Then an appropriate exception or error message should be logged for empty list For BookAppointment
+    
+    ### Scenarios for `getSlots` Method
+
+  Scenario: Slots - Successfully retrieve locations with valid set token
+    Given the TenBridgeService is initialized with a valid token For getSlots
+    When I call the getSlots API with siteID "621" and customerName "OpargoEpicTest" and appointmentType "Office Visit" and startDate "2024-12-09T13:00:00Z" with valid Token
+    Then I should receive a list of slots
+    And each slot should have valid details
+
+  Scenario: Slots - API call to locationsApi.practiceLocation(meta) fails with a 400 or 500 response
+    Given the TenBridgeService is initialized For getSlots
+    When the getSlots API is called and the API returns an error status
+    Then an appropriate exception or error message should be logged For getSlots
+
+  Scenario: Slots - Invalid token causes failure
+    Given the TenBridgeService is initialized with an invalid token For getSlots
+    When I call the getSlots API with invalid Token
+    Then the API call should fail with an unauthorized error For getSlots
+
+  Scenario: Slots - Build response fails
+    Given the TenBridgeService is initialized For getSlots
+    When the getSlots API receives invalid data for response building
+    Then an appropriate exception or error message should be logged at response For getSlots
+
+  Scenario: Slots - API response returns empty list
+    Given the TenBridgeService is initialized For getSlots
+    When the getSlots API returns an empty list
+    Then response should be empty for getSlots

@@ -24,6 +24,7 @@ import com.ps.tenbridge.datahub.dto.ProviderDTO;
 import com.ps.tenbridge.datahub.dto.RacesDTO;
 import com.ps.tenbridge.datahub.dto.ReferralSourcesDTO;
 import com.ps.tenbridge.datahub.dto.ReferringProviderDTO;
+import com.ps.tenbridge.datahub.dto.SlotsInfo;
 import com.ps.tenbridge.datahub.dto.patientAlerts;
 
 import io.cucumber.java.Before;
@@ -279,6 +280,36 @@ public class TenBridgeControllerSteps {
 		response = controller.getChangeReasons(request);
 	}
 
+	// Step to handle valid request for slots
+	@Given("a request with valid attributes for Slots")
+	public void aRequestWithValidAttributesForSlots(Map<String, String> attributes) {
+		request.putAll(attributes);
+		/*
+		 * //sample response { "patient": "eTplvxRvcd-eT1nEI8BvQRQ3", "description":
+		 * "Contact", "category": "Isolation Flag", "preventBooking": "false" }
+		 */
+
+		// Mock service call for valid attributes
+		SlotsInfo slot1 = new SlotsInfo();
+		SlotsInfo slot2 = new SlotsInfo();
+		Mockito.when(tenBridgeService.getSlots("621", "OpargoEpicTest", "Office Visit", "2024-12-09T13:00:00Z"))
+				.thenReturn(List.of(slot1, slot2));
+	}
+
+	// Step to simulate service throwing an exception when calling slots
+	@Given("the service throws an exception when calling Slots")
+	public void theServiceThrowsAnExceptionForSlots() {
+		Mockito.when(tenBridgeService.getSlots(Mockito.anyString(), Mockito.anyString(), Mockito.anyString(),
+				Mockito.anyString())).thenThrow(new RuntimeException("Simulated service error"));
+	}
+
+	// steps to request slots
+	@When("the client requests Slots")
+	public void theClientRequestsSlots() {
+		response = controller.getSlots(request);
+		System.out.println("RRRRRR: " + response);
+	}
+
 	// Step to handle valid request for referral sources
 	@Given("a request with valid attributes for referralSources")
 	public void aRequestWithValidAttributesForReferralSources(Map<String, String> attributes) {
@@ -426,7 +457,6 @@ public class TenBridgeControllerSteps {
 	@When("the client requests BookAppointment")
 	public void theClientRequestsBookAppointment() {
 		response = controller.bookAppointment(request);
-		System.out.println("RRRRRRRRR: " + response);
 	}
 
 	// Step to handle request with missing attributes
