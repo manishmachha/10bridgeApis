@@ -277,29 +277,6 @@ paths:
         "500":
           description: Internal Server Error - An unexpected error occurred.
   /Opargo/dev/appointments:
-    put:
-      operationId: CancelAppointment
-      tags:
-        - CancelAppointment
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CancelAppointmentRequest"
-
-      responses:
-        "200":
-          description: Appointment cancelled successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppointmentResponse"
-        "400":
-          description: Bad Request - The request is invalid or missing required parameters.
-        "401":
-          description: Unauthorized - Invalid or expired token
-        "500":
-          description: Internal Server Error - An unexpected error occurred.
     post:
       operationId: BookAppointment
       tags:
@@ -322,6 +299,29 @@ paths:
           description: Unauthorized - Invalid or expired token
         "500":
           description: Internal Server Error - An unexpected error occurred.
+  /Opargo/dev/appointments/cancel:
+        post:
+          operationId: CancelAppointment
+          tags:
+            - CancelAppointment
+          requestBody:
+            content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/CancelAppointmentRequest"
+          responses:
+            "200":
+              description: Appointment cancelled successfully
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/CancelAppointmentResponse"
+            "400":
+              description: Bad Request - The request is invalid or missing required parameters.
+            "401":
+              description: Unauthorized - Invalid or expired token
+            "500":
+              description: Internal Server Error - An unexpected error occurred.
   /Opargo/dev/patients:
     post:
       operationId: Patient
@@ -640,14 +640,14 @@ paths:
           description: Internal Server Error - An unexpected error occurred.
   /Opargo/dev/location:
     post:
-      operationId: SingleLocation
+      operationId: GetLocationById
       tags:
-        - GetSingleLocation
+        - GetLocationById
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SingleLocationRequest"
+              $ref: "#/components/schemas/GetLocationByIdRequest"
       responses:
         "200":
           description: Get practice locations for a given practice and id.
@@ -659,7 +659,7 @@ paths:
                 locations:
                  type: array
                  items:
-                   $ref: "#/components/schemas/SingleLocationResponse"
+                   $ref: "#/components/schemas/GetLocationByIdResponse"
         "400":
           description: Bad Request - The request is invalid or missing required parameters.
         "401":
@@ -669,14 +669,14 @@ paths:
 
   /Opargo/dev/practitioner:
     post:
-      operationId: SinglePractitioner
+      operationId: GetProviderById
       tags:
-        - GetSinglePractitioner
+        - GetProviderById
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SinglePractitionerRequest"
+              $ref: "#/components/schemas/getProviderByIdRequest"
       responses:
         "200":
           description: Get practice Practitioner for a given practice and id.
@@ -688,7 +688,7 @@ paths:
                 providers:
                  type: array
                  items:
-                   $ref: "#/components/schemas/SinglePractitionerResponse"
+                   $ref: "#/components/schemas/GetProviderByIdResponse"
 
         "400":
           description: Bad Request - The request is invalid or missing required parameters.
@@ -1311,7 +1311,7 @@ components:
       properties:
         appointmentCancelStatus:
           type : boolean
-        appointment_id:
+        appointmentId:
           type : string
     NewAppointmentRequest:
       type: object
@@ -1334,7 +1334,7 @@ components:
               type: string
           required:
             - patientId
-    SingleLocationRequest:
+    GetLocationByIdRequest:
       type: object
       properties:
         meta:
@@ -1346,7 +1346,7 @@ components:
               type: string
           required:
             - Location_id
-    SinglePractitionerRequest:
+    getProviderByIdRequest:
       type: object
       properties:
         meta:
@@ -1403,11 +1403,11 @@ components:
       required:
         - referral_source_id
         - description
-    SinglePractitionerResponse:
+    GetProviderByIdResponse:
       type: object
       $ref: "#/components/schemas/Practitioner"         
 
-    SingleLocationResponse:
+    GetLocationByIdResponse:
       type: object
       $ref: "#/components/schemas/Location"
      

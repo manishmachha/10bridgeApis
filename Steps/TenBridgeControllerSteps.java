@@ -26,6 +26,7 @@ import com.ps.tenbridge.datahub.dto.ReferralSourcesDTO;
 import com.ps.tenbridge.datahub.dto.ReferringProviderDTO;
 import com.ps.tenbridge.datahub.dto.SlotsInfo;
 import com.ps.tenbridge.datahub.dto.patientAlerts;
+import com.veradigm.ps.tenbridge.client.models.CancelAppointmentResponse;
 
 import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
@@ -61,19 +62,6 @@ public class TenBridgeControllerSteps {
 		Mockito.when(tenBridgeService.getRaces("621", "OpargoEpicTest")).thenReturn(List.of(race1, race2, race3));
 	}
 
-	// Step to simulate service throwing an exception when calling races
-	@Given("the service throws an exception when calling races")
-	public void theServiceThrowsAnExceptionForRaces() {
-		Mockito.when(tenBridgeService.getRaces(Mockito.anyString(), Mockito.anyString()))
-				.thenThrow(new RuntimeException("Simulated service error"));
-	}
-
-	// Step to request races
-	@When("the client requests races")
-	public void theClientRequestsRaces() {
-		response = controller.getRaces(request);
-	}
-
 	// Step to handle valid request for ethnicities
 	@Given("a request with valid attributes for ethnicities")
 	public void aRequestWithValidAttributesForGettingEthnicities(Map<String, String> attributes) {
@@ -87,42 +75,16 @@ public class TenBridgeControllerSteps {
 				.thenReturn(List.of(ethnicity1, ethnicity2, ethnicity3));
 	}
 
-	// Step to simulate service throwing an exception when calling ethnicities
-	@Given("the service throws an exception when calling ethnicities")
-	public void theServiceThrowsAnExceptionForEthnicities() {
-		Mockito.when(tenBridgeService.getEthnicities(Mockito.anyString(), Mockito.anyString()))
-				.thenThrow(new RuntimeException("Simulated service error"));
-	}
-
-	// Step to request locations
-	@When("the client requests ethnicities")
-	public void theClientRequestsEthnicities() {
-		response = controller.getEthnicities(request);
-	}
-
 	// Step to handle valid request for providers
 	@Given("a request with valid attributes for providers")
 	public void aRequestWithValidAttributesForProviders(Map<String, String> attributes) {
 		request.putAll(attributes);
 		// Mock service call for valid attributes
 		ProviderDTO provider1 = new ProviderDTO("TestfirstName", "TestSpecialty", "TestListName", "TestLastName",
-				"TestAbbreviation", "TestProviderId", "true");
+				"TestAbbreviation", "TestProviderId", "");
 		ProviderDTO provider2 = new ProviderDTO("TestfirstName1", "TestSpecialty1", "TestListName1", "TestLastName1",
-				"TestAbbreviation1", "TestProviderId1", "true");
+				"TestAbbreviation1", "TestProviderId1", "");
 		Mockito.when(tenBridgeService.getProviders("621", "OpargoEpicTest")).thenReturn(List.of(provider1, provider2));
-	}
-
-	// Step to simulate service throwing an exception when calling providers
-	@Given("the service throws an exception when calling providers")
-	public void theServiceThrowsAnExceptionForProviders() {
-		Mockito.when(tenBridgeService.getProviders(Mockito.anyString(), Mockito.anyString()))
-				.thenThrow(new RuntimeException("Simulated service error"));
-	}
-
-	// Step to request providers
-	@When("the client requests providers")
-	public void theClientRequestsProviders() {
-		response = controller.getProviders(request);
 	}
 
 	// Step to handle valid request for referringProviders
@@ -135,33 +97,12 @@ public class TenBridgeControllerSteps {
 		 * true }
 		 */
 		// Mock service call for valid attributes
-		ReferringProviderDTO referringprovider1 = new ReferringProviderDTO("PHYSICIAN", "E1021", "PHOENIX", null,
-				"PHXMD", "Transplant", "true", null);
-		ReferringProviderDTO referringprovider2 = new ReferringProviderDTO("PHYSICIAN", "E1021", "PHOENIX", null,
+		ReferringProviderDTO referringprovider1 = new ReferringProviderDTO("PHYSICIAN", "E1021", "PHOENIX", false,
+				"PHXMD", "Transplant", null, true);
+		ReferringProviderDTO referringprovider2 = new ReferringProviderDTO("PHYSICIAN", "E1021", "PHOENIX", true,
 				"PHXMD", "Transplant", null, true);
 		Mockito.when(tenBridgeService.getReferringProviders("621", "OpargoEpicTest"))
 				.thenReturn(List.of(referringprovider1, referringprovider2));
-	}
-
-	// Step to simulate service throwing an exception when calling
-	// referringProviders
-	@Given("the service throws an exception when calling referringproviders")
-	public void theServiceThrowsAnExceptionForReferringProviders() {
-		Mockito.when(tenBridgeService.getReferringProviders(Mockito.anyString(), Mockito.anyString()))
-				.thenThrow(new RuntimeException("Simulated service error"));
-	}
-
-	// steps to request referringProviders
-	@When("the client requests referringproviders")
-	public void theClientRequestsReferringProvider() {
-		response = controller.getReferringProviders(request);
-	}
-
-	// Step to simulate service throwing an exception when calling cancelReasons
-	@Given("the service throws an exception when calling cancelReasons")
-	public void theServiceThrowsAnExceptionForCancelReasons() {
-		Mockito.when(tenBridgeService.getCancelReasons(Mockito.anyString(), Mockito.anyString()))
-				.thenThrow(new RuntimeException("Simulated service error"));
 	}
 
 	// Step to handle valid request for locations
@@ -181,19 +122,6 @@ public class TenBridgeControllerSteps {
 		LocationDTO location2 = new LocationDTO("falkfladj1378354", "JGF GI", "564 Anywhere Street", "Naramada", "NI",
 				"53597", "LK", true);
 		Mockito.when(tenBridgeService.getLocations("621", "OpargoEpicTest")).thenReturn(List.of(location1, location2));
-	}
-
-	// Step to simulate service throwing an exception when calling locations
-	@Given("the service throws an exception when calling locations")
-	public void theServiceThrowsAnExceptionForLocations() {
-		Mockito.when(tenBridgeService.getLocations(Mockito.anyString(), Mockito.anyString()))
-				.thenThrow(new RuntimeException("Simulated service error"));
-	}
-
-	// Step to request locations
-	@When("the client requests locations")
-	public void theClientRequestsLocations() {
-		response = controller.getLocations(request);
 	}
 
 	// Step to handle valid request for insurances
@@ -216,11 +144,77 @@ public class TenBridgeControllerSteps {
 				.thenReturn(List.of(insurances1, insurances2));
 	}
 
+	// Step to handle request with missing attributes
+	@Given("a request with missing attributes")
+	public void aRequestWithMissingAttributesForRace(Map<String, String> attributes) {
+		request.putAll(attributes);
+	}
+
+	// Step to simulate service throwing an exception when calling providers
+	@Given("the service throws an exception when calling providers")
+	public void theServiceThrowsAnExceptionForProviders() {
+		Mockito.when(tenBridgeService.getProviders(Mockito.anyString(), Mockito.anyString()))
+				.thenThrow(new RuntimeException("Simulated service error"));
+	}
+
+	// Step to simulate service throwing an exception when calling ethnicities
+	@Given("the service throws an exception when calling ethnicities")
+	public void theServiceThrowsAnExceptionForEthnicities() {
+		Mockito.when(tenBridgeService.getEthnicities(Mockito.anyString(), Mockito.anyString()))
+				.thenThrow(new RuntimeException("Simulated service error"));
+	}
+
+	// Step to simulate service throwing an exception when calling races
+	@Given("the service throws an exception when calling races")
+	public void theServiceThrowsAnExceptionForRaces() {
+		Mockito.when(tenBridgeService.getRaces(Mockito.anyString(), Mockito.anyString()))
+				.thenThrow(new RuntimeException("Simulated service error"));
+	}
+
+	// Step to simulate service throwing an exception when calling locations
+	@Given("the service throws an exception when calling locations")
+	public void theServiceThrowsAnExceptionForLocations() {
+		Mockito.when(tenBridgeService.getLocations(Mockito.anyString(), Mockito.anyString()))
+				.thenThrow(new RuntimeException("Simulated service error"));
+	}
+
 	// Step to simulate service throwing an exception when calling insuranceCarriers
 	@Given("the service throws an exception when calling insuranceCarriers")
 	public void theServiceThrowsAnExceptionForInsuranceCarriers() {
 		Mockito.when(tenBridgeService.getInsurances(Mockito.anyString(), Mockito.anyString()))
 				.thenThrow(new RuntimeException("Simulated service error"));
+	}
+
+	// Step to simulate service throwing an exception when calling
+	// referringproviders
+	@Given("the service throws an exception when calling referringproviders")
+	public void theServiceThrowsAnExceptionForReferringProviders() {
+		Mockito.when(tenBridgeService.getReferringProviders(Mockito.anyString(), Mockito.anyString()))
+				.thenThrow(new RuntimeException("Simulated service error"));
+	}
+
+	// Step to request races
+	@When("the client requests races")
+	public void theClientRequestsRaces() {
+		response = controller.getRaces(request);
+	}
+
+	// Step to request providers
+	@When("the client requests providers")
+	public void theClientRequestsProviders() {
+		response = controller.getProviders(request);
+	}
+
+	// Step to request locations
+	@When("the client requests locations")
+	public void theClientRequestsLocations() {
+		response = controller.getLocations(request);
+	}
+
+	// Step to request locations
+	@When("the client requests ethnicities")
+	public void theClientRequestsEthnicities() {
+		response = controller.getEthnicities(request);
 	}
 
 	// steps to request insuranceCarriers
@@ -229,113 +223,25 @@ public class TenBridgeControllerSteps {
 		response = controller.getInsurances(request);
 	}
 
-	// Step to handle valid request for cancel reasons
-	@Given("a request with valid attributes for cancelReasons")
-	public void aRequestWithValidAttributesForCancelReasons(Map<String, String> attributes) {
-		request.putAll(attributes);
-		/*
-		 * //sample response { "cancelReasonCode": "1100", "cancelReasonDescription":
-		 * "Scheduled from Wait List" }
-		 */
-
-		// Mock service call for valid attributes
-		CancelReasonsDTO cancelReasons1 = new CancelReasonsDTO("1100", "Scheduled from Wait List");
-		CancelReasonsDTO cancelReasons2 = new CancelReasonsDTO("1102", "CMS Therapy Cap Service Not Authorized");
-		Mockito.when(tenBridgeService.getCancelReasons("621", "OpargoEpicTest"))
-				.thenReturn(List.of(cancelReasons1, cancelReasons2));
+	// steps to request referringProviders
+	@When("the client requests referringproviders")
+	public void theClientRequestsReferringProvider() {
+		response = controller.getReferringProviders(request);
 	}
 
-	// steps to request cancelReasons
-	@When("the client requests cancelReasons")
-	public void theClientRequestsCancelReason() {
-		response = controller.getCancelReasons(request);
+	// Step to check response status
+	@Then("the response status should be {int}")
+	public void theResponseStatusShouldBe(int expectedStatus) {
+		Assertions.assertEquals(expectedStatus, response.getStatusCodeValue(),
+				"Expected response status " + expectedStatus + " but got " + response.getStatusCodeValue());
 	}
 
-	// Step to handle valid request for change reasons
-	@Given("a request with valid attributes for changeReasons")
-	public void aRequestWithValidAttributesForChangeReasons(Map<String, String> attributes) {
-		request.putAll(attributes);
-		/*
-		 * //sample response { "changeReasonCode": "1100", "changeReasonDescription":
-		 * "*Unknown" }
-		 */
-
-		// Mock service call for valid attributes
-		ChangeReasonsDTO changeReasons1 = new ChangeReasonsDTO("1100", "Scheduled from Wait List");
-		ChangeReasonsDTO changeReasons2 = new ChangeReasonsDTO("1102", "CMS Therapy Cap Service Not Authorized");
-		Mockito.when(tenBridgeService.getChangeReasons("621", "OpargoEpicTest"))
-				.thenReturn(List.of(changeReasons1, changeReasons2));
-	}
-
-	// Step to simulate service throwing an exception when calling changeReasons
-	@Given("the service throws an exception when calling changeReasons")
-	public void theServiceThrowsAnExceptionForChangeReasons() {
-		Mockito.when(tenBridgeService.getChangeReasons(Mockito.anyString(), Mockito.anyString()))
-				.thenThrow(new RuntimeException("Simulated service error"));
-	}
-
-	// steps to request changeReasons
-	@When("the client requests changeReasons")
-	public void theClientRequestsChangeReason() {
-		response = controller.getChangeReasons(request);
-	}
-
-	// Step to handle valid request for slots
-	@Given("a request with valid attributes for Slots")
-	public void aRequestWithValidAttributesForSlots(Map<String, String> attributes) {
-		request.putAll(attributes);
-		/*
-		 * //sample response { "patient": "eTplvxRvcd-eT1nEI8BvQRQ3", "description":
-		 * "Contact", "category": "Isolation Flag", "preventBooking": "false" }
-		 */
-
-		// Mock service call for valid attributes
-		SlotsInfo slot1 = new SlotsInfo();
-		SlotsInfo slot2 = new SlotsInfo();
-		Mockito.when(tenBridgeService.getSlots("621", "OpargoEpicTest", "Office Visit", "2024-12-09T13:00:00Z"))
-				.thenReturn(List.of(slot1, slot2));
-	}
-
-	// Step to simulate service throwing an exception when calling slots
-	@Given("the service throws an exception when calling Slots")
-	public void theServiceThrowsAnExceptionForSlots() {
-		Mockito.when(tenBridgeService.getSlots(Mockito.anyString(), Mockito.anyString(), Mockito.anyString(),
-				Mockito.anyString())).thenThrow(new RuntimeException("Simulated service error"));
-	}
-
-	// steps to request slots
-	@When("the client requests Slots")
-	public void theClientRequestsSlots() {
-		response = controller.getSlots(request);
-		System.out.println("RRRRRR: " + response);
-	}
-
-	// Step to handle valid request for referral sources
-	@Given("a request with valid attributes for referralSources")
-	public void aRequestWithValidAttributesForReferralSources(Map<String, String> attributes) {
-		request.putAll(attributes);
-		/*
-		 * //sample response { "id": 1100, "name": "Beacon" }
-		 */
-
-		// Mock service call for valid attributes
-		ReferralSourcesDTO referralSources1 = new ReferralSourcesDTO(1100, "Beacon");
-		ReferralSourcesDTO referralSources2 = new ReferralSourcesDTO(1102, "*Deleted");
-		Mockito.when(tenBridgeService.getReferralSources("621", "OpargoEpicTest"))
-				.thenReturn(List.of(referralSources1, referralSources2));
-	}
-
-	// Step to simulate service throwing an exception when calling referralSources
-	@Given("the service throws an exception when calling referralSources")
-	public void theServiceThrowsAnExceptionForReferralSources() {
-		Mockito.when(tenBridgeService.getReferralSources(Mockito.anyString(), Mockito.anyString()))
-				.thenThrow(new RuntimeException("Simulated service error"));
-	}
-
-	// steps to request referralSources
-	@When("the client requests referralSources")
-	public void theClientRequestsReferralSource() {
-		response = controller.getReferralSources(request);
+	// Step to check if response body contains the expected content
+	@Then("the response body should contain {string}")
+	public void theResponseBodyShouldContain(String expectedContent) {
+		String responseBody = response.getBody().toString();
+		Assertions.assertTrue(responseBody.contains(expectedContent),
+				"Expected response body to contain: " + expectedContent + ", but got: " + responseBody);
 	}
 
 	// Step to handle valid request for patient alerts
@@ -376,24 +282,87 @@ public class TenBridgeControllerSteps {
 		 * "Contact", "category": "Isolation Flag", "preventBooking": "false" }
 		 */
 
+		// Mock service call for valid attributes
+		// Creating dummy instances for dependent objects
+		// Creating first PatientInfoDTO object using setters
 		PatientInfoDTO patient1 = new PatientInfoDTO();
-		PatientInfoDTO patient2 = new PatientInfoDTO();
-		Mockito.when(tenBridgeService.getPatients("621", "OpargoEpicTest", "Theodore", "Mychart", "07-07-1948", null,
-				null, null)).thenReturn(List.of(patient1, patient2));
-	}
-
-	// Step to simulate service throwing an exception when calling PatientSearch
-	@Given("the service throws an exception when calling patientSearch")
-	public void theServiceThrowsAnExceptionForPatientSearch() {
-		Mockito.when(tenBridgeService.getPatients(Mockito.anyString(), Mockito.anyString(), Mockito.anyString(),
-				Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString(),
-				Mockito.anyString())).thenThrow(new RuntimeException("Simulated service error"));
+		patient1.setPatientProfileId("profile123");
+		patient1.setPatientId("patient456");
+		patient1.setFirstName("John");
+		patient1.setLastName("Doe");
+		patient1.setBirthDate("1990-01-01");
+		patient1.setPh("1234567890");
+		patient1.setPh2("0987654321");
+		patient1.setEmail("john.doe@example.com");
+		patient1.setListAddress("123 Main St, Apt 4B");
+		patient1.setAddr1("123 Main St");
+		patient1.setAddr2("Apt 4B");
+		patient1.setCity("New York");
+		patient1.setState("NY");
+		patient1.setZip("10001");
+		patient1.setSex("Male");
+		patient1.setSsn("123-45-6789");
+		patient1.setRace("Caucasian");
+		patient1.setEthnicity("Non-Hispanic");
+		patient1.setPrimaryCarePhysician("Dr. Emily");
+		patient1.setPatientAlerts("No known allergies");
+		patient1.setPreventBooking(false);
+		patient1.setComments("Regular check-ups required");
+		Mockito.when(tenBridgeService.getPatients("621", "OpargoEpicTest", "Theodore", "Mychart", "07-07-1948", "", "",
+				"162")).thenReturn(List.of(patient1));
 	}
 
 	// steps to request patientSearch
 	@When("the client requests patientSearch")
 	public void theClientRequestsPatientSearch() {
 		response = controller.getPatient(request);
+	}
+
+	// Step to handle valid request for cancel reasons
+	@Given("a request with valid attributes for cancelReasons")
+	public void aRequestWithValidAttributesForCancelReasons(Map<String, String> attributes) {
+		request.putAll(attributes);
+		/*
+		 * //sample response { "cancelReasonCode": "1100", "cancelReasonDescription":
+		 * "Scheduled from Wait List" }
+		 */
+
+		// Mock service call for valid attributes
+		CancelReasonsDTO cancelReasons1 = new CancelReasonsDTO("1100", "Scheduled from Wait List");
+		CancelReasonsDTO cancelReasons2 = new CancelReasonsDTO("1102", "CMS Therapy Cap Service Not Authorized");
+		Mockito.when(tenBridgeService.getCancelReasons("621", "OpargoEpicTest"))
+				.thenReturn(List.of(cancelReasons1, cancelReasons2));
+	}
+
+	// Step to handle valid request for change reasons
+	@Given("a request with valid attributes for changeReasons")
+	public void aRequestWithValidAttributesForChangeReasons(Map<String, String> attributes) {
+		request.putAll(attributes);
+		/*
+		 * //sample response { "changeReasonCode": "1100", "changeReasonDescription":
+		 * "*Unknown" }
+		 */
+
+		// Mock service call for valid attributes
+		ChangeReasonsDTO changeReasons1 = new ChangeReasonsDTO("1100", "Scheduled from Wait List");
+		ChangeReasonsDTO changeReasons2 = new ChangeReasonsDTO("1102", "CMS Therapy Cap Service Not Authorized");
+		Mockito.when(tenBridgeService.getChangeReasons("621", "OpargoEpicTest"))
+				.thenReturn(List.of(changeReasons1, changeReasons2));
+	}
+
+	// Step to handle valid request for referral sources
+	@Given("a request with valid attributes for referralSources")
+	public void aRequestWithValidAttributesForReferralSources(Map<String, String> attributes) {
+		request.putAll(attributes);
+		/*
+		 * //sample response { "id": 1100, "name": "Beacon" }
+		 */
+
+		// Mock service call for valid attributes
+		ReferralSourcesDTO referralSources1 = new ReferralSourcesDTO(1100, "Beacon");
+		ReferralSourcesDTO referralSources2 = new ReferralSourcesDTO(1102, "*Deleted");
+		Mockito.when(tenBridgeService.getReferralSources("621", "OpargoEpicTest"))
+				.thenReturn(List.of(referralSources1, referralSources2));
 	}
 
 	// Step to handle valid request for AppointmentSearch
@@ -409,19 +378,6 @@ public class TenBridgeControllerSteps {
 		AppointmentInfoDTO appointment2 = new AppointmentInfoDTO();
 		Mockito.when(tenBridgeService.getAppointment("621", "OpargoEpicTest", "e63wRTbPfr1p8UW81d8Seiw3"))
 				.thenReturn(List.of(appointment1, appointment2));
-	}
-
-	// Step to simulate service throwing an exception when calling AppointmentSearch
-	@Given("the service throws an exception when calling AppointmentSearch")
-	public void theServiceThrowsAnExceptionForAppointmentSearch() {
-		Mockito.when(tenBridgeService.getAppointment(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-				.thenThrow(new RuntimeException("Simulated service error"));
-	}
-
-	// steps to request AppointmentSearch
-	@When("the client requests AppointmentSearch")
-	public void theClientRequestsAppointmentSearch() {
-		response = controller.getAppointment(request);
 	}
 
 	// Step to handle valid request for BookAppointment
@@ -442,6 +398,64 @@ public class TenBridgeControllerSteps {
 				"testing booking of appointment")).thenReturn(List.of(appointment1, appointment2));
 	}
 
+	// Step to handle valid request for CancelAppointment
+	@Given("a request with valid attributes for CancelAppointment")
+	public void aRequestWithValidAttributesForCancelAppointment(Map<String, String> attributes) {
+		request.putAll(attributes);
+		/*
+		 * //sample response { "patient": "eTplvxRvcd-eT1nEI8BvQRQ3", "description":
+		 * "Contact", "category": "Isolation Flag", "preventBooking": "false" }
+		 */
+
+		CancelAppointmentResponse cancelAppointmentResponse = new CancelAppointmentResponse();
+		Mockito.when(tenBridgeService.cancelAppointment("621", "OpargoEpicTest",
+				"eQx67kmlpYhPsd3Bbsln71ZCuwmKKLEqt84sKTWWZ4mk3")).thenReturn(cancelAppointmentResponse);
+	}
+
+	// Step to handle valid request for slots
+	@Given("a request with valid attributes for Slots")
+	public void aRequestWithValidAttributesForSlots(Map<String, String> attributes) {
+		request.putAll(attributes);
+		/*
+		 * //sample response { "patient": "eTplvxRvcd-eT1nEI8BvQRQ3", "description":
+		 * "Contact", "category": "Isolation Flag", "preventBooking": "false" }
+		 */
+
+		// Mock service call for valid attributes
+		SlotsInfo slot1 = new SlotsInfo();
+		SlotsInfo slot2 = new SlotsInfo();
+		Mockito.when(tenBridgeService.getSlots("621", "OpargoEpicTest", "Office Visit", "2024-12-09T13:00:00Z"))
+				.thenReturn(List.of(slot1, slot2));
+	}
+
+	// Step to simulate service throwing an exception when calling cancelReasons
+	@Given("the service throws an exception when calling cancelReasons")
+	public void theServiceThrowsAnExceptionForCancelReasons() {
+		Mockito.when(tenBridgeService.getCancelReasons(Mockito.anyString(), Mockito.anyString()))
+				.thenThrow(new RuntimeException("Simulated service error"));
+	}
+
+	// Step to simulate service throwing an exception when calling changeReasons
+	@Given("the service throws an exception when calling changeReasons")
+	public void theServiceThrowsAnExceptionForChangeReasons() {
+		Mockito.when(tenBridgeService.getChangeReasons(Mockito.anyString(), Mockito.anyString()))
+				.thenThrow(new RuntimeException("Simulated service error"));
+	}
+
+	// Step to simulate service throwing an exception when calling referralSources
+	@Given("the service throws an exception when calling referralSources")
+	public void theServiceThrowsAnExceptionForReferralSources() {
+		Mockito.when(tenBridgeService.getReferralSources(Mockito.anyString(), Mockito.anyString()))
+				.thenThrow(new RuntimeException("Simulated service error"));
+	}
+
+	// Step to simulate service throwing an exception when calling AppointmentSearch
+	@Given("the service throws an exception when calling AppointmentSearch")
+	public void theServiceThrowsAnExceptionForAppointmentSearch() {
+		Mockito.when(tenBridgeService.getAppointment(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+				.thenThrow(new RuntimeException("Simulated service error"));
+	}
+
 	// Step to simulate service throwing an exception when calling AppointmentSearch
 	@Given("the service throws an exception when calling BookAppointment")
 	public void theServiceThrowsAnExceptionForBookAppointment() {
@@ -453,31 +467,61 @@ public class TenBridgeControllerSteps {
 				.thenThrow(new RuntimeException("Simulated service error"));
 	}
 
-	// steps to request AppointmentSearch
+	// Step to simulate service throwing an exception when calling slots
+	@Given("the service throws an exception when calling Slots")
+	public void theServiceThrowsAnExceptionForSlots() {
+		Mockito.when(tenBridgeService.getSlots(Mockito.anyString(), Mockito.anyString(), Mockito.anyString(),
+				Mockito.anyString())).thenThrow(new RuntimeException("Simulated service error"));
+	}
+
+	// Step to simulate service throwing an exception when calling cancelAppointment
+	@Given("the service throws an exception when calling CancelAppointment")
+	public void theServiceThrowsAnExceptionForCancelAppointment() {
+		Mockito.when(tenBridgeService.cancelAppointment(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+				.thenThrow(new RuntimeException("Simulated service error"));
+	}
+
+	// steps to request cancelReasons
+	@When("the client requests cancelReasons")
+	public void theClientRequestsCancelReason() {
+		response = controller.getCancelReasons(request);
+	}
+
+	// steps to request changeReasons
+	@When("the client requests changeReasons")
+	public void theClientRequestsChangeReason() {
+		response = controller.getChangeReasons(request);
+	}
+
+	// steps to request referralSources
+	@When("the client requests referralSources")
+	public void theClientRequestsReferralSource() {
+		response = controller.getReferralSources(request);
+	}
+
+	// steps to request CancelAppointment
+	@When("the client requests CancelAppointment")
+	public void theClientRequestsCancelAppointment() {
+		response = controller.cancelAppointment(request);
+	}
+
+	// steps to request BookAppointment
 	@When("the client requests BookAppointment")
 	public void theClientRequestsBookAppointment() {
 		response = controller.bookAppointment(request);
 	}
 
-	// Step to handle request with missing attributes
-	@Given("a request with missing attributes")
-	public void aRequestWithMissingAttributesForRace(Map<String, String> attributes) {
-		request.putAll(attributes);
+	// steps to request AppointmentSearch
+	@When("the client requests AppointmentSearch")
+	public void theClientRequestsAppointmentSearch() {
+		response = controller.getAppointment(request);
 	}
 
-	// Step to check response status
-	@Then("the response status should be {int}")
-	public void theResponseStatusShouldBe(int expectedStatus) {
-		Assertions.assertEquals(expectedStatus, response.getStatusCodeValue(),
-				"Expected response status " + expectedStatus + " but got " + response.getStatusCodeValue());
+	// steps to request slots
+	@When("the client requests Slots")
+	public void theClientRequestsSlots() {
+		response = controller.getSlots(request);
+		System.out.println("RRRRRR: " + response);
 	}
 
-	// Step to check if response body contains the expected content
-	@Then("the response body should contain {string}")
-	public void theResponseBodyShouldContain(String expectedContent) {
-		String responseBody = response.getBody().toString();
-		System.out.println(responseBody);
-		Assertions.assertTrue(responseBody.contains(expectedContent),
-				"Expected response body to contain: " + expectedContent + ", but got: " + responseBody);
-	}
 }

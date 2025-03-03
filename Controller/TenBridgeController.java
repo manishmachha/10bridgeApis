@@ -1,21 +1,16 @@
 package com.ps.tenbridge.datahub.controller;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,8 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ps.tenbridge.datahub.controllerImpl.TenBridgeService;
 import com.ps.tenbridge.datahub.dto.AppointmentInfoDTO;
-import com.ps.tenbridge.datahub.dto.LocationDTO;
-import com.ps.tenbridge.datahub.dto.ProviderDTO;
+import com.ps.tenbridge.datahub.dto.PatientInfoDTO;
 import com.ps.tenbridge.datahub.utility.EncryptionHelper;
 import com.ps.tenbridge.datahub.utility.EncryptionKeyConstants;
 
@@ -35,6 +29,7 @@ public class TenBridgeController {
 
 	private final TenBridgeService tenBridgeService;
 
+	@Autowired
 	public TenBridgeController(TenBridgeService tenBridgeService) {
 		this.tenBridgeService = tenBridgeService;
 
@@ -56,12 +51,6 @@ public class TenBridgeController {
 	public ResponseEntity<Object> getInsurances(@RequestBody Map<String, String> request) {
 		return processRequest(request, List.of("siteID", "customerName"), "insuranceCarriers",
 				(siteID, customerName) -> tenBridgeService.getInsurances(siteID, customerName));
-	}
-
-	@PostMapping("/insurance-carriers")
-	public ResponseEntity<Object> getInsuranceCarriers(@RequestBody Map<String, String> request) {
-		return processRequest(request, List.of("siteID", "customerName"), "insuranceCarriers",
-				(siteID, customerName) -> tenBridgeService.getInsuranceCarriers(siteID, customerName));
 	}
 
 	@PostMapping("/referring-providers")
@@ -100,6 +89,54 @@ public class TenBridgeController {
 				(siteID, customerName) -> tenBridgeService.getReferralSources(siteID, customerName));
 	}
 
+	@PostMapping("/patient-search")
+	public ResponseEntity<Object> getPatient(@RequestBody Map<String, String> request) {
+
+		try {
+			// Validate required fields in PatientRequest
+			boolean missingFields = Stream.of("siteID", "customerName", "last", "dob", "transactionId")
+					.anyMatch(field -> request.get(field) == null || request.get(field).isEmpty());
+
+			if (missingFields) {
+				return new ResponseEntity<>("Invalid request: required fields missing", HttpStatus.BAD_REQUEST);
+			}
+
+			// Extract values after validation
+			String siteID = request.get("siteID");
+			String customerName = request.get("customerName");
+			String firstName = request.get("first");
+			String lastName = request.get("last");
+			String dateOfBirth = parseDate(request.get("dob"));
+			String tid = request.get("transactionId");
+			String patientProfileId = request.get("patientProfileId");
+			String patientNumber = request.get("patientNumber");
+			String practiceId = request.get("practiceId");
+
+			if (request.get("patientProfileId") != null // existing patient
+					&& !request.get("patientProfileId").isEmpty()) {
+				patientProfileId = EncryptionHelper.decrypt(patientProfileId,
+						EncryptionKeyConstants.SSO_ENCRYPTION_KEY);
+
+				// patient Number
+			} else if (request.get("patientNumber") != null && !request.get("patientNumber").isEmpty()) {
+				patientNumber = request.get("patientNumber");
+
+			}
+
+			// Fetch patients
+			List<PatientInfoDTO> patients = tenBridgeService.getPatients(siteID, customerName, firstName, lastName,
+					dateOfBirth, patientProfileId, patientNumber, practiceId);
+
+			return createSuccessResponseforPatientSearch("patients", patients, tid);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			return new ResponseEntity<Object>("Error occured while retreiving patients",
+					HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+
+	}
+
 	@PostMapping("/patient-alerts")
 	public ResponseEntity<Object> getPatientAlerts(@RequestBody Map<String, String> request) {
 		try {
@@ -120,65 +157,27 @@ public class TenBridgeController {
 			responseBody.put("body", patientAlerts);
 			return new ResponseEntity<>(responseBody, HttpStatus.OK);
 		} catch (Exception e) {
-			logger.error("Error occurred while retrieving PatientAlerts", e);
-			return new ResponseEntity<>("Error occurred while retrieving PatientAlerts",
+			logger.error("Error occurred while retrieving patient alerts", e);
+			return new ResponseEntity<>("Error occurred while retrieving patient alerts",
 					HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 
-	@PostMapping("/patient-search")
-	public ResponseEntity<Object> getPatient(@RequestBody Map<String, String> request) {
-
+	@PostMapping("/patient-appointments")
+	public ResponseEntity<Object> getAppointment(@RequestBody Map<String, String> request) {
 		try {
-			// Validate required fields in PatientRequest
-			boolean missingFields = Stream.of("siteID", "customerName", "last", "dob", "transactionId")
+			// Validate required fields in book-appointments
+			boolean missingFields = Stream.of("siteID", "customerName", "patient_id")
 					.anyMatch(field -> request.get(field) == null || request.get(field).isEmpty());
+
 			if (missingFields) {
 				return new ResponseEntity<>("Invalid request: required fields missing", HttpStatus.BAD_REQUEST);
 			}
-			// Extract values after validation
 			String siteID = request.get("siteID");
 			String customerName = request.get("customerName");
-			String firstName = request.get("first");
-			String lastName = request.get("last");
-			String dateOfBirth = parseDate(request.get("dob"));
-			String tid = request.get("transactionId");
-			String patientProfileId = request.get("patientProfileId");
-			String patientNumber = request.get("patientNumber");
-			String practiceId = request.get("practiceId");
-
-			if (request.get("patientProfileId") != null // existing patient
-					&& !request.get("patientProfileId").isEmpty()) {
-				patientProfileId = EncryptionHelper.decrypt(patientProfileId,
-						EncryptionKeyConstants.SSO_ENCRYPTION_KEY);
-				// patient Number
-			} else if (request.get("patientNumber") != null && !request.get("patientNumber").isEmpty()) {
-				patientNumber = request.get("patientNumber");
-
-			}
-			// Fetch patients
-			Object patients = tenBridgeService.getPatients(siteID, customerName, firstName, lastName, dateOfBirth,
-					patientProfileId, patientNumber, practiceId);
-			return createSuccessResponseforPatientSearch("patients", patients, tid);
-		} catch (Exception e) {
-			e.printStackTrace();
-			return new ResponseEntity<Object>("Error occured while retreiving patients",
-					HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-
-	}
-
-	@PostMapping("/appointments")
-	public ResponseEntity<Object> getAppointment(@RequestBody Map<String, String> request) {
-		try {
-			if (request.get("siteID") == null || request.get("siteID").isEmpty() || request.get("customerName") == null
-					|| request.get("customerName").isEmpty() || request.get("patient_id") == null
-					|| request.get("patient_id").isEmpty()) {
-				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
-			}
-			Object appointment = tenBridgeService.getAppointment(request.get("siteID"), request.get("customerName"),
-					request.get("patient_id"));
-			return new ResponseEntity<>(appointment, HttpStatus.OK);
+			String patient_id = request.get("patient_id");
+			List<AppointmentInfoDTO> appointment = tenBridgeService.getAppointment(siteID, customerName, patient_id);
+			return createSuccessWithResponse("patientAppointments", appointment);
 		} catch (Exception e) {
 			logger.error("Error occurred while retrieving appointment", e);
 			return new ResponseEntity<>("Error occurred while retrieving appointment",
@@ -186,101 +185,24 @@ public class TenBridgeController {
 		}
 	}
 
-	@PostMapping("/slots")
-	public ResponseEntity<Object> getSlots(@RequestBody Map<String, String> request) {
-		try {
-			if (request.get("siteID") == null || request.get("siteID").isEmpty() || request.get("customerName") == null
-					|| request.get("customerName").isEmpty() || request.get("appointmentType") == null
-					|| request.get("appointmentType").isEmpty() || request.get("startDate") == null
-					|| request.get("startDate").isEmpty()) {
-				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
-			}
-
-			// Extract values after validation
-			String siteID = request.get("siteID");
-			String customerName = request.get("customerName");
-			String appointmentType = request.get("appointmentType");
-			String startDate = request.get("startDate");
-			Object slots = tenBridgeService.getSlots(siteID, customerName, appointmentType, startDate);
-			return new ResponseEntity<>(slots, HttpStatus.OK);
-		} catch (Exception e) {
-			logger.error("Error occurred while retrieving slots", e);
-			return new ResponseEntity<>("Error occurred while retrieving slots", HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-	}
-
-	@PostMapping("/create-patient")
-	public ResponseEntity<Object> createPatient(@RequestBody Map<String, String> request) {
-		try {
-			if (request.get("siteID") == null || request.get("customerName") == null
-					|| request.get("first_name") == null || request.get("last_name") == null
-					|| request.get("middle_name") == null || request.get("date_of_birth") == null
-					|| request.get("gender") == null || request.get("phone") == null
-					|| request.get("address_line_1") == null || request.get("address_line_2") == null
-					|| request.get("state") == null || request.get("city") == null || request.get("zip") == null
-					|| request.get("email") == null) {
-				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
-			}
-
-			Object patientObject = tenBridgeService.createPatient(request.get("siteID"), request.get("customerName"),
-					request.get("first_name"), request.get("last_name"), request.get("middle_name"),
-					request.get("date_of_birth"), request.get("gender"), request.get("phone"),
-					request.get("address_line_1"), request.get("address_line_2"), request.get("state"),
-					request.get("city"), request.get("zip"), request.get("email"));
-			return new ResponseEntity<>(patientObject, HttpStatus.OK);
-		} catch (Exception e) {
-			logger.error("Error occurred while creating patient", e);
-			return new ResponseEntity<>("Error occurred while creating patient", HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-	}
-
-	@PostMapping("/appointment-notes")
-	public ResponseEntity<Object> getAppointmentNotes(@RequestBody Map<String, String> request) {
-		try {
-			if (request.get("siteID") == null || request.get("customerName") == null
-					|| request.get("appointment_id") == null || request.get("patient_profile_id") == null) {
-				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
-			}
-			Object appointmentNotes = tenBridgeService.getAppointmentNotes(request.get("siteID"),
-					request.get("customerName"), request.get("appointment_id"), request.get("patient_profile_id"));
-			return new ResponseEntity<>(appointmentNotes, HttpStatus.OK);
-		} catch (Exception e) {
-			logger.error("Error occurred while retrieving appointmentNotes", e);
-			return new ResponseEntity<>("Error occurred while retrieving appointmentNotes",
-					HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-	}
-
 	@PostMapping("/cancel-appointment")
 	public ResponseEntity<Object> cancelAppointment(@RequestBody Map<String, String> request) {
 		try {
-			if (request.get("siteID") == null || request.get("customerName") == null
-					|| request.get("requested_appointment_id") == null) {
-				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
+			boolean missingFields = Stream.of("siteID", "customerName", "requested_appointment_id")
+					.anyMatch(field -> request.get(field) == null || request.get(field).isEmpty());
+
+			if (missingFields) {
+				return new ResponseEntity<>("Invalid request: required fields missing", HttpStatus.BAD_REQUEST);
 			}
+			HashMap<String, Object> response = new HashMap<>();
 			Object cancelledAppointment = tenBridgeService.cancelAppointment(request.get("siteID"),
 					request.get("customerName"), request.get("requested_appointment_id"));
-			return new ResponseEntity<>(cancelledAppointment, HttpStatus.OK);
+			response.put("body", cancelledAppointment);
+			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (Exception e) {
 			logger.error("Error occurred while cancelling appointment", e);
 			return new ResponseEntity<>("Error occurred while cancelling appointment",
 					HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-	}
-
-	@PostMapping("/schedule-search")
-	public ResponseEntity<Object> scheduleSearch(@RequestBody Map<String, String> request) {
-		try {
-			if (request.get("siteID") == null || request.get("customerName") == null
-					|| request.get("patientProfileId") == null || request.get("start_date") == null) {
-				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
-			}
-			Object schedule = tenBridgeService.scheduleSearch(request.get("siteID"), request.get("customerName"),
-					request.get("patientProfileId"), request.get("start_date"));
-			return new ResponseEntity<>(schedule, HttpStatus.OK);
-		} catch (Exception e) {
-			logger.error("Error occurred while retrieving schedule", e);
-			return new ResponseEntity<>("Error occurred while retrieving schedule", HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 
@@ -312,71 +234,28 @@ public class TenBridgeController {
 		}
 	}
 
-//	@PostMapping("/bulk-locations")
-//	public ResponseEntity<Map<String, LocationDTO>> fetchLocationsInBulk(@RequestBody Map<String, Object> requestBody)
-//			throws InterruptedException, ExecutionException {
-//		String siteID = (String) requestBody.get("siteID");
-//		String customerName = (String) requestBody.get("customerName");
-//		List<String> locationIdList = (List<String>) requestBody.get("locationIds");
-//
-//		// Convert the List of location IDs to a Set
-//		Set<String> locationIds = new HashSet<>(locationIdList);
-//
-//		Map<String, LocationDTO> locations = tenBridgeService.getLocationsInCache(siteID, customerName, locationIds);
-//		return ResponseEntity.ok(locations);
-//	}
+	@PostMapping("/slots")
+	public ResponseEntity<Object> getSlots(@RequestBody Map<String, String> request) {
+		try {
+			if (request.get("siteID") == null || request.get("siteID").isEmpty() || request.get("customerName") == null
+					|| request.get("customerName").isEmpty() || request.get("appointmentType") == null
+					|| request.get("appointmentType").isEmpty() || request.get("startDate") == null
+					|| request.get("startDate").isEmpty()) {
+				return new ResponseEntity<>("Invalid request: required fields missing ", HttpStatus.BAD_REQUEST);
+			}
 
-//	@PostMapping("/bulk-locations")
-//	public CompletableFuture<ResponseEntity<Map<String, LocationDTO>>> fetchLocationsInBulk(
-//			@RequestBody Map<String, Object> requestBody) {
-//		String siteID = (String) requestBody.get("siteID");
-//		String customerName = (String) requestBody.get("customerName");
-//		List<String> locationIdList = (List<String>) requestBody.get("locationIds");
-//
-//		// Convert the List of location IDs to a Set
-//		Set<String> locationIds = new HashSet<>(locationIdList);
-//		return tenBridgeService.getLocationsInBulkAsync(siteID, customerName, locationIds)
-//				.thenApply(locations -> ResponseEntity.ok(locations));
-//	}
-
-//	@PostMapping("/bulk-practitioners")
-//	public ResponseEntity<Map<String, ProviderDTO>> fetchPractitionersInBulk(
-//			@RequestBody Map<String, Object> requestBody) throws InterruptedException, ExecutionException {
-//		String siteID = (String) requestBody.get("siteID");
-//		String customerName = (String) requestBody.get("customerName");
-//		List<String> practitionerIdList = (List<String>) requestBody.get("practitionerIds");
-//
-//		// Convert the List of practitioner IDs to a Set
-//		Set<String> practitionerIds = new HashSet<>(practitionerIdList);
-//
-//		Map<String, ProviderDTO> practitioners = tenBridgeService.getPractitionersInCache(siteID, customerName,
-//				practitionerIds);
-//		return ResponseEntity.ok(practitioners);
-//	}
-
-//	@PostMapping("/bulk-practitioners")
-//	public CompletableFuture<ResponseEntity<Map<String, ProviderDTO>>> fetchPractitionersInBulk(
-//			@RequestBody Map<String, Object> requestBody) {
-//		String siteID = (String) requestBody.get("siteID");
-//		String customerName = (String) requestBody.get("customerName");
-//		List<String> practitionerIdList = (List<String>) requestBody.get("practitionerIds");
-//
-//		// Convert the List of practitioner IDs to a Set
-//		Set<String> practitionerIds = new HashSet<>(practitionerIdList);
-//
-//		return tenBridgeService.getPractitionersInBulkAsync(siteID, customerName, practitionerIds)
-//				.thenApply(practitioners -> ResponseEntity.ok(practitioners));
-//	}
-
-//	@GetMapping("location-from-redis/{redisKey}")
-//	public ResponseEntity<LocationDTO> getLocation(@PathVariable String redisKey) {
-//		LocationDTO locationDTO = tenBridgeService.getLocationFromRedis(redisKey);
-//		if (locationDTO != null) {
-//			return new ResponseEntity<>(locationDTO, HttpStatus.OK);
-//		} else {
-//			return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
-//		}
-//	}
+			// Extract values after validation
+			String siteID = request.get("siteID");
+			String customerName = request.get("customerName");
+			String appointmentType = request.get("appointmentType");
+			String startDate = request.get("startDate");
+			Object slots = tenBridgeService.getSlots(siteID, customerName, appointmentType, startDate);
+			return new ResponseEntity<>(slots, HttpStatus.OK);
+		} catch (Exception e) {
+			logger.error("Error occurred while retrieving slots", e);
+			return new ResponseEntity<>("Error occurred while retrieving slots", HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+	}
 
 	private ResponseEntity<Object> processRequest(Map<String, String> request, List<String> requiredAttributes,
 			String entityName, BiFunction<String, String, Object> serviceCall) {
@@ -434,10 +313,6 @@ public class TenBridgeController {
 		return ResponseEntity.ok(responseBody);
 	}
 
-	private ResponseEntity<Object> createErrorResponse(String errorMessage) {
-		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", errorMessage));
-	}
-
 	private String parseDate(String dateString) {
 		String parsedDate = null;
 		if (dateString != null && dateString.length() > 7 && dateString.indexOf("null") == -1
@@ -458,5 +333,17 @@ public class TenBridgeController {
 			parsedDate = year + "-" + month + "-" + day;
 		}
 		return parsedDate;
+	}
+
+	private ResponseEntity<Object> createErrorResponse(String errorMessage) {
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", errorMessage));
+	}
+
+	private ResponseEntity<Object> createSuccessWithResponse(String entityName, Object result) {
+		Map<String, Object> responseBody = new HashMap<>();
+		Map<String, Object> body = new HashMap<>();
+		body.put(entityName, result);
+		responseBody.put("response", body);
+		return ResponseEntity.ok(responseBody);
 	}
 }

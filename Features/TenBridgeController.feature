@@ -168,7 +168,59 @@ Feature: Ten Bridge Controller Scenarios
     Then the response status should be 500
     And the response body should contain "Error occurred while retrieving referringproviders"
     
-    Scenario: Successfully retrieve changeReasons
+
+       Scenario: Successfully retrieve patientAlerts
+    Given a request with valid attributes for patientAlerts
+      | key          | value           |
+      | siteID       | 621             |
+      | customerName | OpargoEpicTest  |
+      | patientProfileId | eTplvxRvcd-eT1nEI8BvQRQ3  |
+    When the client requests patientAlerts
+    Then the response status should be 200
+    And the response body should contain "patientAlerts"
+ 
+     Scenario: Missing required attributes in the request for patientAlerts
+    Given a request with missing attributes
+      | customerName |
+      | OpargoEpicTest |
+    When the client requests patientAlerts
+    Then the response status should be 400
+    And the response body should contain "Invalid request: required fields missing"
+ 
+  Scenario: Error occurred during patientAlerts call
+    Given a request with valid attributes for patientAlerts
+      | key          | value           |
+      | siteID       | 621             |
+      | customerName | OpargoEpicTest  |
+      | patientProfileId | eTplvxRvcd-eT1nEI8BvQRQ3  |	
+    And the service throws an exception when calling patientAlerts
+    When the client requests patientAlerts
+    Then the response status should be 500
+    And the response body should contain "Error occurred while retrieving patient alerts"
+    
+   Scenario: Successfully retrieve patientSearch
+    Given a request with valid attributes for patientSearch
+      | key           | value           |
+      | siteID        | 621             |
+      | customerName  | OpargoEpicTest  |
+      | first         | Theodore        |
+      | last          | Mychart         |
+      | dob           | 07-07-1948      |
+      | transactionId | hgmnb           |
+    When the client requests patientSearch
+    Then the response status should be 200
+    And the response body should contain "patients"
+ 
+   Scenario: Missing required attributes in the request for patientSearch
+    Given a request with missing attributes
+      | customerName |
+      | OpargoEpicTest |
+    When the client requests patientSearch
+    Then the response status should be 400
+    And the response body should contain "Invalid request: required fields missing"
+ 
+     
+     Scenario: Successfully retrieve changeReasons
     Given a request with valid attributes for changeReasons
       | key          | value           |
       | siteID       | 621             |
@@ -248,76 +300,8 @@ Feature: Ten Bridge Controller Scenarios
     When the client requests referralSources
     Then the response status should be 500
     And the response body should contain "Error occurred while retrieving referralSources"
-    
-    Scenario: Successfully retrieve patientAlerts
-    Given a request with valid attributes for patientAlerts
-      | key          | value           |
-      | siteID       | 621             |
-      | customerName | OpargoEpicTest  |
-      | patientProfileId | eTplvxRvcd-eT1nEI8BvQRQ3  |
-    When the client requests patientAlerts
-    Then the response status should be 200
-    And the response body should contain "patientAlerts"
 
-     Scenario: Missing required attributes in the request for patientAlerts
-    Given a request with missing attributes
-      | customerName |
-      | OpargoEpicTest |
-    When the client requests patientAlerts
-    Then the response status should be 400
-    And the response body should contain "Invalid request: required fields missing"
-
-  Scenario: Error occurred during patientAlerts call
-    Given a request with valid attributes for patientAlerts
-      | key          | value           |
-      | siteID       | 621             |
-      | customerName | OpargoEpicTest  |
-      | patientProfileId | eTplvxRvcd-eT1nEI8BvQRQ3  |	
-    And the service throws an exception when calling patientAlerts
-    When the client requests patientAlerts
-    Then the response status should be 500
-    And the response body should contain "Error occurred while retrieving PatientAlerts"
-    
-   Scenario: Successfully retrieve patientSearch
-    Given a request with valid attributes for patientSearch
-      | key           | value                |
-      | siteID        | 621                  |
-      | customerName  | OpargoEpicTest       |
-      | first         | Theodore             |
-      | last          | Mychart              |
-      | dob           | 07-07-1948           |
-      | transactionId | patientsearch_107143 |
-      | practiceId    | 162                  |
-      | patientNumber |  107143              |
-    When the client requests patientSearch
-    Then the response status should be 200
-    And the response body should contain "patients"
-
-   Scenario: Missing required attributes in the request for patientSearch
-    Given a request with missing attributes
-      | customerName |
-      | OpargoEpicTest |
-    When the client requests patientSearch
-    Then the response status should be 400
-    And the response body should contain "Invalid request: required fields missing"
-
-  #Scenario: Error occurred during patientSearch call
-  # Given a request with valid attributes for patientSearch
-  #    | key           | value                |
-  #    | siteID        | 621                  |
-  #    | customerName  | OpargoEpicTest       |
-  #    | first         | Theodore             |
-  #    | last          | Mychart              |
-  #    | dob           | 07-07-1948           |
-  #    | transactionId | patientsearch_107143 |
-  #    | practiceId    | 162                  |
-  #    | patientNumber |  107143              |
-  #  And the service throws an exception when calling patientSearch
-  #  When the client requests patientSearch
-  #  Then the response status should be 500
-  #  And the response body should contain "Error occurred while retrieving Patients"
-    
-   Scenario: Successfully retrieve appointmentSearch
+Scenario: Successfully retrieve appointmentSearch
     Given a request with valid attributes for AppointmentSearch
       | key           | value                           |
       | siteID        | 621                             |
@@ -326,7 +310,7 @@ Feature: Ten Bridge Controller Scenarios
     When the client requests AppointmentSearch
     Then the response status should be 200
     And the response body should contain "AppointmentInfoDTO"
-
+ 
    Scenario: Missing required attributes in the request for AppointmentSearch
     Given a request with missing attributes
       | customerName |
@@ -334,7 +318,7 @@ Feature: Ten Bridge Controller Scenarios
     When the client requests AppointmentSearch
     Then the response status should be 400
     And the response body should contain "Invalid request: required fields missing"
-
+ 
   Scenario: Error occurred during appointmentSearch call
    Given a request with valid attributes for AppointmentSearch
       | key           | value                           |
@@ -345,7 +329,7 @@ Feature: Ten Bridge Controller Scenarios
     When the client requests AppointmentSearch
     Then the response status should be 500
     And the response body should contain "Error occurred while retrieving appointment"
-    
+
     Scenario: Successfully retrieve BookAppointment
     Given a request with valid attributes for BookAppointment
       | key           | value                           |
@@ -408,3 +392,32 @@ Feature: Ten Bridge Controller Scenarios
     When the client requests Slots
     Then the response status should be 500
     And the response body should contain "Error occurred while retrieving slots"
+    
+     Scenario: Successfully retrieve CancelAppointment
+    Given a request with valid attributes for CancelAppointment
+      | key           | value                           |
+      | siteID        | 621                             |
+      | customerName  | OpargoEpicTest                  |
+      | requested_appointment_id     | eQx67kmlpYhPsd3Bbsln71ZCuwmKKLEqt84sKTWWZ4mk3        |
+    When the client requests CancelAppointment
+    Then the response status should be 200
+    And the response body should contain "CancelAppointmentResponse"
+
+   Scenario: Missing required attributes in the request for CancelAppointment
+    Given a request with missing attributes
+      | customerName |
+      | OpargoEpicTest |
+    When the client requests CancelAppointment
+    Then the response status should be 400
+    And the response body should contain "Invalid request: required fields missing"
+
+  Scenario: Error occurred during CancelAppointment call
+   Given a request with valid attributes for CancelAppointment
+      | key           | value                           |
+      | siteID        | 621                             |
+      | customerName  | OpargoEpicTest                  |
+      | requested_appointment_id     | eQx67kmlpYhPsd3Bbsln71ZCuwmKKLEqt84sKTWWZ4mk3        |
+    And the service throws an exception when calling CancelAppointment
+    When the client requests CancelAppointment
+    Then the response status should be 500
+    And the response body should contain "Error occurred while cancelling appointment"
